@@ -1,26 +1,6 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Delete,
-  Body,
-  Param,
-  Headers,
-} from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse as SwaggerApiResponse,
-  ApiParam,
-} from '@nestjs/swagger';
+import { Controller } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { CardUseCase } from '../../application/card.use-case';
-import { CreateCardRequest } from '../../application/dto/request/create-card.request';
-import { UpdateCardRequest } from '../../application/dto/request/update-card.request';
-import { ReorderCardsRequest } from '../../application/dto/request/reorder-cards.request';
-import { CardCreateResponse } from '../../application/dto/response/card-create.response';
-import { CardResponse } from '../../application/dto/response/card.response';
-import { ApiResponse } from '../../../shared/common/api-response';
 
 @ApiTags('cards')
 @Controller('cards')
