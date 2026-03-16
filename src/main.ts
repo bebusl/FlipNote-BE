@@ -30,7 +30,7 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('cardsets/swagger-ui', app, document);
+  SwaggerModule.setup('card-sets/swagger-ui', app, document);
 
   await app.startAllMicroservices();
   await app.listen(process.env.PORT ?? 8085);

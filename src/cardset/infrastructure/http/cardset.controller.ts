@@ -15,9 +15,9 @@ import { CardsetCreateResponse } from '../../application/dto/response/cardset-cr
 import { CardsetResponse } from '../../application/dto/response/cardset.response';
 import { ApiResponse } from '../../../shared/common/api-response';
 
-@Controller('cardsets')
+@Controller('card-sets')
 export class CardsetController {
-  constructor(private readonly cardsetUseCase: CardsetUseCase) {}
+  constructor(private readonly cardsetUseCase: CardsetUseCase) { }
 
   @Post()
   async create(
