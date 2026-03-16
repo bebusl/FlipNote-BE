@@ -41,6 +41,15 @@ export class CardsetManagerRepositoryImpl implements ICardsetManagerRepository {
     return orms.map((orm) => CardsetManagerMapper.toDomain(orm));
   }
 
+  async findByCardSetIds(cardSetIds: number[]): Promise<CardsetManager[]> {
+    if (cardSetIds.length === 0) return [];
+    const orms = await this.ormRepository
+      .createQueryBuilder('m')
+      .where('m.cardSetId IN (:...cardSetIds)', { cardSetIds })
+      .getMany();
+    return orms.map((orm) => CardsetManagerMapper.toDomain(orm));
+  }
+
   async delete(id: number): Promise<void> {
     await this.ormRepository.delete(id);
   }

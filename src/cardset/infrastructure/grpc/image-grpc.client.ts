@@ -29,7 +29,7 @@ interface ImageCommandService {
 
 @Injectable()
 export class ImageGrpcClient implements OnModuleInit {
-  private imageService: ImageCommandService;
+  private imageService!: ImageCommandService;
 
   constructor(
     @Inject('IMAGE_GRPC_CLIENT') private readonly client: ClientGrpc,

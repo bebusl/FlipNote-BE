@@ -13,7 +13,7 @@ interface GroupCommandService {
 
 @Injectable()
 export class GroupGrpcClient implements OnModuleInit {
-  private groupService: GroupCommandService;
+  private groupService!: GroupCommandService;
 
   constructor(
     @Inject('GROUP_GRPC_CLIENT') private readonly client: ClientGrpc,

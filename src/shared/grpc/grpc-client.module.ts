@@ -11,7 +11,8 @@ import { join } from 'path';
         options: {
           package: 'group.v1',
           protoPath: join(__dirname, '../../proto/group.proto'),
-          url: process.env.GRPC_GROUP_URL ?? 'localhost:9094',
+          url: process.env.GROUP_GRPC_URL ?? 'localhost:9094',
+          loader: { longs: Number },
         },
       },
       {
@@ -20,7 +21,8 @@ import { join } from 'path';
         options: {
           package: 'image.v1',
           protoPath: join(__dirname, '../../proto/image.proto'),
-          url: process.env.GRPC_IMAGE_URL ?? 'localhost:9092',
+          url: process.env.IMAGE_GRPC_URL ?? 'localhost:9092',
+          loader: { longs: Number },
         },
       },
       {
@@ -29,7 +31,18 @@ import { join } from 'path';
         options: {
           package: 'user_query',
           protoPath: join(__dirname, '../../proto/user.proto'),
-          url: process.env.GRPC_USER_URL ?? 'localhost:9091',
+          url: process.env.USER_GRPC_URL ?? 'localhost:9091',
+          loader: { longs: Number },
+        },
+      },
+      {
+        name: 'REACTION_GRPC_CLIENT',
+        transport: Transport.GRPC,
+        options: {
+          package: 'reaction',
+          protoPath: join(__dirname, '../../proto/reaction.proto'),
+          url: process.env.GRPC_REACTION_URL ?? 'localhost:9093',
+          loader: { longs: Number },
         },
       },
     ]),
