@@ -27,7 +27,7 @@ interface ReactionService {
 
 @Injectable()
 export class ReactionGrpcClient implements OnModuleInit {
-  private reactionService: ReactionService;
+  private reactionService!: ReactionService;
 
   constructor(
     @Inject('REACTION_GRPC_CLIENT') private readonly client: ClientGrpc,
