@@ -4,10 +4,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { CardsetModule } from './cardset/cardset.module';
 import { CollaborationModule } from './collaboration/collaboration.module';
+import { ReactionModule } from './reaction/reaction.module';
 
 import { CardsetOrmEntity } from './cardset/infrastructure/persistence/orm/cardset.orm-entity';
 import { CardOrmEntity } from './cardset/infrastructure/persistence/orm/card.orm-entity';
 import { CardsetManagerOrmEntity } from './cardset/infrastructure/persistence/orm/cardset-manager.orm-entity';
+import { CardSetMetadataOrmEntity } from './cardset/infrastructure/persistence/orm/cardset-metadata.orm-entity';
 import { YjsDocumentOrmEntity } from './collaboration/infrastructure/persistence/orm/yjs-document.orm-entity';
 
 @Module({
@@ -24,6 +26,7 @@ import { YjsDocumentOrmEntity } from './collaboration/infrastructure/persistence
         CardsetOrmEntity,
         CardOrmEntity,
         CardsetManagerOrmEntity,
+        CardSetMetadataOrmEntity,
         YjsDocumentOrmEntity,
       ],
       synchronize: true,
@@ -31,6 +34,7 @@ import { YjsDocumentOrmEntity } from './collaboration/infrastructure/persistence
     AuthModule,
     CardsetModule,
     CollaborationModule,
+    ReactionModule,
   ],
 })
 export class AppModule {}

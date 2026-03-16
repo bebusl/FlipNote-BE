@@ -11,6 +11,8 @@ import { CARD_REPOSITORY } from '../domain/repository/card.repository';
 import type { ICardRepository } from '../domain/repository/card.repository';
 import { CARDSET_MANAGER_REPOSITORY } from '../domain/repository/cardset-manager.repository';
 import type { ICardsetManagerRepository } from '../domain/repository/cardset-manager.repository';
+import { CARDSET_METADATA_REPOSITORY } from '../domain/repository/cardset-metadata.repository';
+import type { ICardSetMetadataRepository } from '../domain/repository/cardset-metadata.repository';
 import { CardsetCardDomainService } from '../domain/service/cardset-card.domain-service';
 import { GroupGrpcClient } from '../infrastructure/grpc/group-grpc.client';
 import { ImageGrpcClient } from '../infrastructure/grpc/image-grpc.client';
@@ -30,6 +32,8 @@ export class CardsetUseCase {
     private readonly groupGrpcClient: GroupGrpcClient,
     private readonly imageGrpcClient: ImageGrpcClient,
     private readonly dataSource: DataSource,
+    @Inject(CARDSET_METADATA_REPOSITORY)
+    private readonly metadataRepository: ICardSetMetadataRepository,
   ) {}
 
   private async checkIsManager(
@@ -83,20 +87,44 @@ export class CardsetUseCase {
   private readonly defaultImageUrl =
     process.env.DEFAULT_CARDSET_IMAGE_URL ?? '';
 
-  async findAll(
-    userId: number,
-  ): Promise<{ cardset: Cardset; imageUrl: string }[]> {
+  async findAll(userId: number): Promise<
+    {
+      cardset: Cardset;
+      imageUrl: string;
+      likeCount: number;
+      bookmarkCount: number;
+    }[]
+  > {
     const cardsets = await this.cardsetRepository.findAll();
-    const result: { cardset: Cardset; imageUrl: string }[] = [];
+    const visibleCardsets: Cardset[] = [];
     for (const cardset of cardsets) {
       const canView =
         cardset.visibility === Visibility.PUBLIC ||
         (await this.groupGrpcClient.isUserInGroup(cardset.groupId, userId));
-      if (!canView) continue;
+      if (canView) visibleCardsets.push(cardset);
+    }
+
+    const metadataMap = await this.metadataRepository.findByCardSetIds(
+      visibleCardsets.map((c) => c.id),
+    );
+
+    const result: {
+      cardset: Cardset;
+      imageUrl: string;
+      likeCount: number;
+      bookmarkCount: number;
+    }[] = [];
+    for (const cardset of visibleCardsets) {
       const imageUrl = cardset.imageRefId
         ? await this.imageGrpcClient.getImageUrl(cardset.id)
         : this.defaultImageUrl;
-      result.push({ cardset, imageUrl });
+      const meta = metadataMap.get(cardset.id);
+      result.push({
+        cardset,
+        imageUrl,
+        likeCount: meta?.likeCount ?? 0,
+        bookmarkCount: meta?.bookmarkCount ?? 0,
+      });
     }
     return result;
   }
@@ -104,7 +132,12 @@ export class CardsetUseCase {
   async findOne(
     id: number,
     userId: number,
-  ): Promise<{ cardset: Cardset; imageUrl: string } | null> {
+  ): Promise<{
+    cardset: Cardset;
+    imageUrl: string;
+    likeCount: number;
+    bookmarkCount: number;
+  } | null> {
     const cardset = await this.cardsetRepository.findById(id);
     if (!cardset) return null;
     if (cardset.visibility !== Visibility.PUBLIC) {
@@ -118,7 +151,13 @@ export class CardsetUseCase {
     const imageUrl = cardset.imageRefId
       ? await this.imageGrpcClient.getImageUrl(cardset.id)
       : this.defaultImageUrl;
-    return { cardset, imageUrl };
+    const meta = await this.metadataRepository.findByCardSetId(id);
+    return {
+      cardset,
+      imageUrl,
+      likeCount: meta?.likeCount ?? 0,
+      bookmarkCount: meta?.bookmarkCount ?? 0,
+    };
   }
 
   async update(
