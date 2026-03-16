@@ -20,7 +20,7 @@ async function bootstrap() {
   });
 
   app.setGlobalPrefix('v1');
-  app.useWebSocketAdapter(new IoAdapter(app));
+  app.useWebSocketAdapter(new IoAdapter(app) as never);
   app.useGlobalFilters(new GlobalExceptionFilter());
 
   const swaggerConfig = new DocumentBuilder()
@@ -28,6 +28,13 @@ async function bootstrap() {
     .setDescription('API documentation')
     .setVersion('1.0.0')
     .addBearerAuth()
+    .addGlobalParameters({
+      in: 'header',
+      name: 'X-USER-ID',
+      required: true,
+      schema: { type: 'string' },
+      description: '유저 ID',
+    })
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('card-sets/swagger-ui', app, document, {

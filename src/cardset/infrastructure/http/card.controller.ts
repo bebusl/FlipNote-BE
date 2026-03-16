@@ -12,7 +12,6 @@ import {
   ApiTags,
   ApiOperation,
   ApiResponse as SwaggerApiResponse,
-  ApiHeader,
   ApiParam,
 } from '@nestjs/swagger';
 import { CardUseCase } from '../../application/card.use-case';
@@ -24,7 +23,6 @@ import { CardResponse } from '../../application/dto/response/card.response';
 import { ApiResponse } from '../../../shared/common/api-response';
 
 @ApiTags('cards')
-@ApiHeader({ name: 'X-USER-ID', required: true, description: '유저 ID' })
 @Controller('cards')
 export class CardController {
   constructor(private readonly cardUseCase: CardUseCase) {}
