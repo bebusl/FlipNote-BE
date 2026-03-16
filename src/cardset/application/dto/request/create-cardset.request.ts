@@ -20,6 +20,6 @@ export class CreateCardsetRequest {
   @ApiPropertyOptional({ example: 1001 })
   imageRefId?: number | null;
 
-  @ApiPropertyOptional({ example: 10 })
-  cardCount?: number;
+  @ApiPropertyOptional({ example: [1, 2], type: [Number] })
+  managerIds?: number[];
 }

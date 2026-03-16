@@ -13,18 +13,21 @@ import {
   ApiOperation,
   ApiResponse as SwaggerApiResponse,
   ApiParam,
+  ApiExtraModels,
 } from '@nestjs/swagger';
 import { CardsetUseCase } from '../../application/cardset.use-case';
 import { CreateCardsetRequest } from '../../application/dto/request/create-cardset.request';
 import { UpdateCardsetRequest } from '../../application/dto/request/update-cardset.request';
 import { CardsetCreateResponse } from '../../application/dto/response/cardset-create.response';
 import { CardsetResponse } from '../../application/dto/response/cardset.response';
+import { ManagerInfoResponse } from '../../application/dto/response/manager-info.response';
 import { ApiResponse } from '../../../shared/common/api-response';
 
+@ApiExtraModels(CardsetResponse, ManagerInfoResponse)
 @ApiTags('card-sets')
 @Controller('card-sets')
 export class CardsetController {
-  constructor(private readonly cardsetUseCase: CardsetUseCase) {}
+  constructor(private readonly cardsetUseCase: CardsetUseCase) { }
 
   @Post()
   @ApiOperation({ summary: '카드셋 생성' })
@@ -54,8 +57,25 @@ export class CardsetController {
   ): Promise<ApiResponse<CardsetResponse[]>> {
     const results = await this.cardsetUseCase.findAll(parseInt(userId));
     return ApiResponse.success(
-      results.map(({ cardset, imageUrl, likeCount, bookmarkCount }) =>
-        CardsetResponse.from(cardset, imageUrl, likeCount, bookmarkCount),
+      results.map(
+        ({
+          cardset,
+          imageUrl,
+          likeCount,
+          bookmarkCount,
+          liked,
+          bookmarked,
+          managers,
+        }) =>
+          CardsetResponse.from(
+            cardset,
+            imageUrl,
+            likeCount,
+            bookmarkCount,
+            liked,
+            bookmarked,
+            managers,
+          ),
       ),
     );
   }
@@ -84,6 +104,9 @@ export class CardsetController {
             result.imageUrl,
             result.likeCount,
             result.bookmarkCount,
+            result.liked,
+            result.bookmarked,
+            result.managers,
           )
         : null,
     );
@@ -124,25 +147,25 @@ export class CardsetController {
     return ApiResponse.success(null, '삭제되었습니다.');
   }
 
-  @Put(':cardsetId/card-count')
-  @ApiOperation({ summary: '카드 수 업데이트' })
-  @ApiParam({ name: 'cardsetId', type: Number })
-  @SwaggerApiResponse({
-    status: 200,
-    description: '업데이트 성공',
-    type: CardsetResponse,
-  })
-  @SwaggerApiResponse({ status: 403, description: '매니저 권한 없음' })
-  async updateCardCount(
-    @Headers('X-USER-ID') userId: string,
-    @Param('cardsetId') cardsetId: string,
-    @Body() body: { cardCount: number },
-  ): Promise<ApiResponse<CardsetResponse | null>> {
-    const cardset = await this.cardsetUseCase.updateCardCount(
-      parseInt(cardsetId),
-      parseInt(userId),
-      body.cardCount,
-    );
-    return ApiResponse.success(cardset ? CardsetResponse.from(cardset) : null);
-  }
+  // @Put(':cardsetId/card-count')
+  // @ApiOperation({ summary: '카드 수 업데이트' })
+  // @ApiParam({ name: 'cardsetId', type: Number })
+  // @SwaggerApiResponse({
+  //   status: 200,
+  //   description: '업데이트 성공',
+  //   type: CardsetResponse,
+  // })
+  // @SwaggerApiResponse({ status: 403, description: '매니저 권한 없음' })
+  // async updateCardCount(
+  //   @Headers('X-USER-ID') userId: string,
+  //   @Param('cardsetId') cardsetId: string,
+  //   @Body() body: { cardCount: number },
+  // ): Promise<ApiResponse<CardsetResponse | null>> {
+  //   const cardset = await this.cardsetUseCase.updateCardCount(
+  //     parseInt(cardsetId),
+  //     parseInt(userId),
+  //     body.cardCount,
+  //   );
+  //   return ApiResponse.success(cardset ? CardsetResponse.from(cardset) : null);
+  // }
 }

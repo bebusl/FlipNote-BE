@@ -16,4 +16,7 @@ export class UpdateCardsetRequest {
 
   @ApiPropertyOptional({ example: 1001 })
   imageRefId?: number;
+
+  @ApiPropertyOptional({ example: [1, 2], type: [Number] })
+  managerIds?: number[];
 }

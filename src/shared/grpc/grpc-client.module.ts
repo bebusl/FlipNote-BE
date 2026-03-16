@@ -32,6 +32,15 @@ import { join } from 'path';
           url: process.env.GRPC_USER_URL ?? 'localhost:9091',
         },
       },
+      {
+        name: 'REACTION_GRPC_CLIENT',
+        transport: Transport.GRPC,
+        options: {
+          package: 'reaction',
+          protoPath: join(__dirname, '../../proto/reaction.proto'),
+          url: process.env.GRPC_REACTION_URL ?? 'localhost:9093',
+        },
+      },
     ]),
   ],
   exports: [ClientsModule],

@@ -13,5 +13,6 @@ export interface ICardsetManagerRepository {
     cardSetId: number,
   ): Promise<CardsetManager | null>;
   findAllByCardSetId(cardSetId: number): Promise<CardsetManager[]>;
+  findByCardSetIds(cardSetIds: number[]): Promise<CardsetManager[]>;
   delete(id: number): Promise<void>;
 }

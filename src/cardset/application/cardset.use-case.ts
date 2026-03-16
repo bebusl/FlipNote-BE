@@ -16,6 +16,9 @@ import type { ICardSetMetadataRepository } from '../domain/repository/cardset-me
 import { CardsetCardDomainService } from '../domain/service/cardset-card.domain-service';
 import { GroupGrpcClient } from '../infrastructure/grpc/group-grpc.client';
 import { ImageGrpcClient } from '../infrastructure/grpc/image-grpc.client';
+import { ReactionGrpcClient } from '../infrastructure/grpc/reaction-grpc.client';
+import { UserGrpcClient } from '../infrastructure/grpc/user-grpc.client';
+import type { UserInfo } from '../infrastructure/grpc/user-grpc.client';
 import { CreateCardsetRequest } from './dto/request/create-cardset.request';
 import { UpdateCardsetRequest } from './dto/request/update-cardset.request';
 
@@ -31,6 +34,8 @@ export class CardsetUseCase {
     private readonly cardsetCardDomainService: CardsetCardDomainService,
     private readonly groupGrpcClient: GroupGrpcClient,
     private readonly imageGrpcClient: ImageGrpcClient,
+    private readonly reactionGrpcClient: ReactionGrpcClient,
+    private readonly userGrpcClient: UserGrpcClient,
     private readonly dataSource: DataSource,
     @Inject(CARDSET_METADATA_REPOSITORY)
     private readonly metadataRepository: ICardSetMetadataRepository,
@@ -53,25 +58,36 @@ export class CardsetUseCase {
   async create(userId: number, dto: CreateCardsetRequest): Promise<Cardset> {
     await this.groupGrpcClient.checkUserInGroup(dto.groupId, userId);
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const additionalManagerIds: number[] = dto.managerIds ?? [];
+    for (const managerId of additionalManagerIds) {
+      await this.groupGrpcClient.checkUserInGroup(dto.groupId, managerId);
+    }
+
     return this.dataSource.transaction(async (manager) => {
       const cardset = Cardset.create(dto);
       const savedCardset = await this.cardsetRepository.save(cardset, manager);
 
-      const cardCount = dto.cardCount ?? 10;
       const cardsToAdd = this.cardsetCardDomainService.buildCardsToAdd(
         savedCardset.id,
         0,
-        cardCount,
+        10,
       );
       for (const card of cardsToAdd) {
         await this.cardRepository.save(card, manager);
       }
 
-      const cardsetManager = CardsetManager.create({
+      const managerIds = [
         userId,
-        cardSetId: savedCardset.id,
-      });
-      await this.cardsetManagerRepository.save(cardsetManager, manager);
+        ...additionalManagerIds.filter((id) => id !== userId),
+      ];
+      for (const managerId of managerIds) {
+        const cardsetManager = CardsetManager.create({
+          userId: managerId,
+          cardSetId: savedCardset.id,
+        });
+        await this.cardsetManagerRepository.save(cardsetManager, manager);
+      }
 
       if (dto.imageRefId) {
         await this.imageGrpcClient.activateImage(
@@ -87,12 +103,40 @@ export class CardsetUseCase {
   private readonly defaultImageUrl =
     process.env.DEFAULT_CARDSET_IMAGE_URL ?? '';
 
+  private readonly skipUserGrpc = process.env.SKIP_USER_GRPC === 'true';
+  private readonly skipReactionGrpc = process.env.SKIP_REACTION_GRPC === 'true';
+
+  private async getManagersForCardSets(
+    cardSetIds: number[],
+  ): Promise<Map<number, UserInfo[]>> {
+    if (cardSetIds.length === 0 || this.skipUserGrpc) return new Map();
+    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
+    const managers: CardsetManager[] =
+      await this.cardsetManagerRepository.findByCardSetIds(cardSetIds);
+    const userIds: number[] = [...new Set(managers.map((m) => m.userId))];
+    /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
+    const users = await this.userGrpcClient.getUsersByIds(userIds);
+    const userMap = new Map(users.map((u) => [u.id, u]));
+    const result = new Map<number, UserInfo[]>();
+    for (const m of managers) {
+      const user = userMap.get(m.userId);
+      if (!user) continue;
+      const list = result.get(m.cardSetId) ?? [];
+      list.push(user);
+      result.set(m.cardSetId, list);
+    }
+    return result;
+  }
+
   async findAll(userId: number): Promise<
     {
       cardset: Cardset;
       imageUrl: string;
       likeCount: number;
       bookmarkCount: number;
+      liked: boolean;
+      bookmarked: boolean;
+      managers: UserInfo[];
     }[]
   > {
     const cardsets = await this.cardsetRepository.findAll();
@@ -104,15 +148,27 @@ export class CardsetUseCase {
       if (canView) visibleCardsets.push(cardset);
     }
 
-    const metadataMap = await this.metadataRepository.findByCardSetIds(
-      visibleCardsets.map((c) => c.id),
-    );
+    const ids = visibleCardsets.map((c) => c.id);
+    const [metadataMap, likedMap, bookmarkedMap, managersMap] =
+      await Promise.all([
+        this.metadataRepository.findByCardSetIds(ids),
+        this.skipReactionGrpc
+          ? Promise.resolve(new Map<number, boolean>())
+          : this.reactionGrpcClient.areLiked(ids, userId),
+        this.skipReactionGrpc
+          ? Promise.resolve(new Map<number, boolean>())
+          : this.reactionGrpcClient.areBookmarked(ids, userId),
+        this.getManagersForCardSets(ids),
+      ]);
 
     const result: {
       cardset: Cardset;
       imageUrl: string;
       likeCount: number;
       bookmarkCount: number;
+      liked: boolean;
+      bookmarked: boolean;
+      managers: UserInfo[];
     }[] = [];
     for (const cardset of visibleCardsets) {
       const imageUrl = cardset.imageRefId
@@ -124,6 +180,9 @@ export class CardsetUseCase {
         imageUrl,
         likeCount: meta?.likeCount ?? 0,
         bookmarkCount: meta?.bookmarkCount ?? 0,
+        liked: likedMap.get(cardset.id) ?? false,
+        bookmarked: bookmarkedMap.get(cardset.id) ?? false,
+        managers: managersMap.get(cardset.id) ?? [],
       });
     }
     return result;
@@ -137,6 +196,9 @@ export class CardsetUseCase {
     imageUrl: string;
     likeCount: number;
     bookmarkCount: number;
+    liked: boolean;
+    bookmarked: boolean;
+    managers: UserInfo[];
   } | null> {
     const cardset = await this.cardsetRepository.findById(id);
     if (!cardset) return null;
@@ -148,16 +210,86 @@ export class CardsetUseCase {
       if (!inGroup)
         throw new BusinessException(ErrorCode.CARDSET_ACCESS_DENIED);
     }
-    const imageUrl = cardset.imageRefId
-      ? await this.imageGrpcClient.getImageUrl(cardset.id)
-      : this.defaultImageUrl;
-    const meta = await this.metadataRepository.findByCardSetId(id);
+    const [imageUrl, meta, liked, bookmarked, managersMap] = await Promise.all([
+      cardset.imageRefId
+        ? this.imageGrpcClient.getImageUrl(cardset.id)
+        : Promise.resolve(this.defaultImageUrl),
+      this.metadataRepository.findByCardSetId(id),
+      this.skipReactionGrpc
+        ? Promise.resolve(false)
+        : this.reactionGrpcClient.isLiked(id, userId),
+      this.skipReactionGrpc
+        ? Promise.resolve(false)
+        : this.reactionGrpcClient.isBookmarked(id, userId),
+      this.getManagersForCardSets([id]),
+    ]);
     return {
       cardset,
       imageUrl,
       likeCount: meta?.likeCount ?? 0,
       bookmarkCount: meta?.bookmarkCount ?? 0,
+      liked,
+      bookmarked,
+      managers: managersMap.get(id) ?? [],
     };
+  }
+
+  async findByGroupId(
+    groupId: number,
+    userId: number,
+  ): Promise<
+    {
+      cardset: Cardset;
+      imageUrl: string;
+      likeCount: number;
+      bookmarkCount: number;
+      liked: boolean;
+      bookmarked: boolean;
+      managers: UserInfo[];
+    }[]
+  > {
+    await this.groupGrpcClient.checkUserInGroup(groupId, userId);
+    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
+    const cardsets: Cardset[] =
+      await this.cardsetRepository.findByGroupId(groupId);
+    const ids: number[] = cardsets.map((c) => c.id);
+    /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
+    const [metadataMap, likedMap, bookmarkedMap, managersMap] =
+      await Promise.all([
+        this.metadataRepository.findByCardSetIds(ids),
+        this.skipReactionGrpc
+          ? Promise.resolve(new Map<number, boolean>())
+          : this.reactionGrpcClient.areLiked(ids, userId),
+        this.skipReactionGrpc
+          ? Promise.resolve(new Map<number, boolean>())
+          : this.reactionGrpcClient.areBookmarked(ids, userId),
+        this.getManagersForCardSets(ids),
+      ]);
+    const result: {
+      cardset: Cardset;
+      imageUrl: string;
+      likeCount: number;
+      bookmarkCount: number;
+      liked: boolean;
+      bookmarked: boolean;
+      managers: UserInfo[];
+    }[] = [];
+    for (const cardset of cardsets) {
+      const imageUrl = cardset.imageRefId
+        ? await this.imageGrpcClient.getImageUrl(cardset.id)
+        : this.defaultImageUrl;
+      const meta = metadataMap.get(cardset.id);
+      result.push({
+        cardset,
+        imageUrl,
+        likeCount: meta?.likeCount ?? 0,
+        bookmarkCount: meta?.bookmarkCount ?? 0,
+        liked: likedMap.get(cardset.id) ?? false,
+        bookmarked: bookmarkedMap.get(cardset.id) ?? false,
+        managers: managersMap.get(cardset.id) ?? [],
+      });
+    }
+    return result;
   }
 
   async update(
@@ -170,9 +302,33 @@ export class CardsetUseCase {
 
     await this.checkIsManager(id, userId);
 
-    return this.dataSource.transaction(async () => {
+    return this.dataSource.transaction(async (manager) => {
       if (dto.imageRefId !== undefined) {
         await this.imageGrpcClient.changeImage(dto.imageRefId, id);
+      }
+
+      if (dto.managerIds !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const newManagerIds: number[] = dto.managerIds;
+        for (const managerId of newManagerIds) {
+          await this.groupGrpcClient.checkUserInGroup(
+            cardset.groupId,
+            managerId,
+          );
+        }
+
+        const existing =
+          await this.cardsetManagerRepository.findAllByCardSetId(id);
+        for (const m of existing) {
+          await this.cardsetManagerRepository.delete(m.id);
+        }
+        for (const managerId of newManagerIds) {
+          const cardsetManager = CardsetManager.create({
+            userId: managerId,
+            cardSetId: id,
+          });
+          await this.cardsetManagerRepository.save(cardsetManager, manager);
+        }
       }
 
       return this.cardsetRepository.update(id, dto);
