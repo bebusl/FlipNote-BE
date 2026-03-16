@@ -302,11 +302,11 @@ export class CardsetUseCase {
 
     await this.checkIsManager(id, userId);
 
-    return this.dataSource.transaction(async (manager) => {
-      if (dto.imageRefId !== undefined) {
-        await this.imageGrpcClient.changeImage(dto.imageRefId, id);
-      }
+    if (dto.imageRefId !== undefined) {
+      await this.imageGrpcClient.changeImage(dto.imageRefId, id);
+    }
 
+    return this.dataSource.transaction(async (manager) => {
       if (dto.managerIds !== undefined) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const newManagerIds: number[] = dto.managerIds;
