@@ -8,6 +8,13 @@ import {
   Param,
   Headers,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse as SwaggerApiResponse,
+  ApiHeader,
+  ApiParam,
+} from '@nestjs/swagger';
 import { CardUseCase } from '../../application/card.use-case';
 import { CreateCardRequest } from '../../application/dto/request/create-card.request';
 import { UpdateCardRequest } from '../../application/dto/request/update-card.request';
@@ -16,11 +23,19 @@ import { CardCreateResponse } from '../../application/dto/response/card-create.r
 import { CardResponse } from '../../application/dto/response/card.response';
 import { ApiResponse } from '../../../shared/common/api-response';
 
+@ApiTags('cards')
+@ApiHeader({ name: 'X-USER-ID', required: true, description: '유저 ID' })
 @Controller('cards')
 export class CardController {
   constructor(private readonly cardUseCase: CardUseCase) {}
 
   @Post()
+  @ApiOperation({ summary: '카드 생성' })
+  @SwaggerApiResponse({
+    status: 201,
+    description: '생성 성공',
+    type: CardCreateResponse,
+  })
   async create(
     @Headers('X-USER-ID') _userId: string,
     @Body() dto: CreateCardRequest,
@@ -30,6 +45,13 @@ export class CardController {
   }
 
   @Get('cardset/:cardsetId')
+  @ApiOperation({ summary: '카드셋의 카드 목록 조회' })
+  @ApiParam({ name: 'cardsetId', type: Number })
+  @SwaggerApiResponse({
+    status: 200,
+    description: '조회 성공',
+    type: [CardResponse],
+  })
   async findByCardsetId(
     @Headers('X-USER-ID') _userId: string,
     @Param('cardsetId') cardsetId: string,
@@ -41,6 +63,13 @@ export class CardController {
   }
 
   @Get(':cardId')
+  @ApiOperation({ summary: '카드 단건 조회' })
+  @ApiParam({ name: 'cardId', type: Number })
+  @SwaggerApiResponse({
+    status: 200,
+    description: '조회 성공',
+    type: CardResponse,
+  })
   async findOne(
     @Headers('X-USER-ID') _userId: string,
     @Param('cardId') cardId: string,
@@ -50,6 +79,8 @@ export class CardController {
   }
 
   @Put('reorder')
+  @ApiOperation({ summary: '카드 순서 변경' })
+  @SwaggerApiResponse({ status: 200, description: '순서 변경 성공' })
   async reorderCards(
     @Headers('X-USER-ID') _userId: string,
     @Body() dto: ReorderCardsRequest,
@@ -59,6 +90,13 @@ export class CardController {
   }
 
   @Put(':cardId')
+  @ApiOperation({ summary: '카드 수정' })
+  @ApiParam({ name: 'cardId', type: Number })
+  @SwaggerApiResponse({
+    status: 200,
+    description: '수정 성공',
+    type: CardResponse,
+  })
   async update(
     @Headers('X-USER-ID') _userId: string,
     @Param('cardId') cardId: string,
@@ -69,6 +107,9 @@ export class CardController {
   }
 
   @Delete(':cardId')
+  @ApiOperation({ summary: '카드 삭제' })
+  @ApiParam({ name: 'cardId', type: Number })
+  @SwaggerApiResponse({ status: 200, description: '삭제 성공' })
   async remove(
     @Headers('X-USER-ID') _userId: string,
     @Param('cardId') cardId: string,

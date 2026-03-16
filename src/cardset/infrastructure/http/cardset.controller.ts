@@ -8,6 +8,13 @@ import {
   Param,
   Headers,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse as SwaggerApiResponse,
+  ApiHeader,
+  ApiParam,
+} from '@nestjs/swagger';
 import { CardsetUseCase } from '../../application/cardset.use-case';
 import { CreateCardsetRequest } from '../../application/dto/request/create-cardset.request';
 import { UpdateCardsetRequest } from '../../application/dto/request/update-cardset.request';
@@ -15,11 +22,20 @@ import { CardsetCreateResponse } from '../../application/dto/response/cardset-cr
 import { CardsetResponse } from '../../application/dto/response/cardset.response';
 import { ApiResponse } from '../../../shared/common/api-response';
 
+@ApiTags('card-sets')
+@ApiHeader({ name: 'X-USER-ID', required: true, description: '유저 ID' })
 @Controller('card-sets')
 export class CardsetController {
-  constructor(private readonly cardsetUseCase: CardsetUseCase) { }
+  constructor(private readonly cardsetUseCase: CardsetUseCase) {}
 
   @Post()
+  @ApiOperation({ summary: '카드셋 생성' })
+  @SwaggerApiResponse({
+    status: 201,
+    description: '생성 성공',
+    type: CardsetCreateResponse,
+  })
+  @SwaggerApiResponse({ status: 403, description: '그룹 멤버 아님' })
   async create(
     @Headers('X-USER-ID') userId: string,
     @Body() dto: CreateCardsetRequest,
@@ -29,6 +45,12 @@ export class CardsetController {
   }
 
   @Get()
+  @ApiOperation({ summary: '카드셋 목록 조회' })
+  @SwaggerApiResponse({
+    status: 200,
+    description: '조회 성공',
+    type: [CardsetResponse],
+  })
   async findAll(
     @Headers('X-USER-ID') userId: string,
   ): Promise<ApiResponse<CardsetResponse[]>> {
@@ -41,6 +63,14 @@ export class CardsetController {
   }
 
   @Get(':cardsetId')
+  @ApiOperation({ summary: '카드셋 단건 조회' })
+  @ApiParam({ name: 'cardsetId', type: Number })
+  @SwaggerApiResponse({
+    status: 200,
+    description: '조회 성공',
+    type: CardsetResponse,
+  })
+  @SwaggerApiResponse({ status: 403, description: '접근 권한 없음' })
   async findOne(
     @Headers('X-USER-ID') userId: string,
     @Param('cardsetId') cardsetId: string,
@@ -55,6 +85,14 @@ export class CardsetController {
   }
 
   @Put(':cardsetId')
+  @ApiOperation({ summary: '카드셋 수정' })
+  @ApiParam({ name: 'cardsetId', type: Number })
+  @SwaggerApiResponse({
+    status: 200,
+    description: '수정 성공',
+    type: CardsetResponse,
+  })
+  @SwaggerApiResponse({ status: 403, description: '매니저 권한 없음' })
   async update(
     @Headers('X-USER-ID') userId: string,
     @Param('cardsetId') cardsetId: string,
@@ -69,6 +107,10 @@ export class CardsetController {
   }
 
   @Delete(':cardsetId')
+  @ApiOperation({ summary: '카드셋 삭제' })
+  @ApiParam({ name: 'cardsetId', type: Number })
+  @SwaggerApiResponse({ status: 200, description: '삭제 성공' })
+  @SwaggerApiResponse({ status: 403, description: '매니저 권한 없음' })
   async remove(
     @Headers('X-USER-ID') userId: string,
     @Param('cardsetId') cardsetId: string,
@@ -78,6 +120,14 @@ export class CardsetController {
   }
 
   @Put(':cardsetId/card-count')
+  @ApiOperation({ summary: '카드 수 업데이트' })
+  @ApiParam({ name: 'cardsetId', type: Number })
+  @SwaggerApiResponse({
+    status: 200,
+    description: '업데이트 성공',
+    type: CardsetResponse,
+  })
+  @SwaggerApiResponse({ status: 403, description: '매니저 권한 없음' })
   async updateCardCount(
     @Headers('X-USER-ID') userId: string,
     @Param('cardsetId') cardsetId: string,
