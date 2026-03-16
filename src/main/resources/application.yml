@@ -119,14 +119,30 @@ spring:
           predicates:
             - Path=/groups/actuator/health
 
+        - id: cardset-swagger
+          uri: http://cardset-service:8085
+          predicates:
+            - name: Path
+              args:
+                patterns:
+                  - /card-sets/swagger-ui.html
+                  - /card-sets/swagger-ui/**
+                  - /card-sets/v3/api-docs
+                  - /card-sets/v3/api-docs/**
+
+        - id: cardset-health
+          uri: http://cardset-service:8085
+          predicates:
+            - Path=/card-sets/health
+
         - id: cardset-private
           uri: http://cardset-service:8085
           predicates:
             - name: Path
               args:
                 patterns:
-                  - /v1/cardsets
-                  - /v1/cardsets/**
+                  - /v1/card-sets
+                  - /v1/card-sets/**
                   - /v1/cards
                   - /v1/cards/**
           filters:
@@ -135,20 +151,9 @@ spring:
         - id: cardset-websocket
           uri: ws://cardset-service:8085
           predicates:
-            - Path=/cardsets/**
+            - Path=/v1/card-sets/ws/**
           filters:
             - AuthenticationFilter
-
-        - id: cardset-swagger
-          uri: http://cardset-service:8085
-          predicates:
-            - name: Path
-              args:
-                patterns:
-                  - /cardsets/swagger-ui.html
-                  - /cardsets/swagger-ui/**
-                  - /cardsets/v3/api-docs
-                  - /cardsets/v3/api-docs/**
 
 app:
   user-service:
