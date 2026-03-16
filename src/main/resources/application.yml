@@ -95,6 +95,7 @@ spring:
                 patterns:
                   - /v1/groups/**
                   - /v1/joins/**
+                  - /v1/group-invitations
           filters:
             - AuthenticationFilter
 
