@@ -116,7 +116,7 @@ export class CardsetUseCase {
     const userIds: number[] = [...new Set(managers.map((m) => m.userId))];
     /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
     const users = await this.userGrpcClient.getUsersByIds(userIds);
-    const userMap = new Map(users.map((u) => [u.id, u]));
+    const userMap = new Map(users.map((u) => [Number(u.id), u]));
     const result = new Map<number, UserInfo[]>();
     for (const m of managers) {
       const user = userMap.get(m.userId);
