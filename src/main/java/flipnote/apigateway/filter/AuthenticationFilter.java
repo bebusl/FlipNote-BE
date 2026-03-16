@@ -3,7 +3,9 @@ package flipnote.apigateway.filter;
 import flipnote.apigateway.client.TokenValidationClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
+import org.springframework.cloud.gateway.filter.OrderedGatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
+import org.springframework.core.Ordered;
 import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -25,7 +27,7 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
 
     @Override
     public GatewayFilter apply(Config config) {
-        return (exchange, chain) -> {
+        GatewayFilter filter = (exchange, chain) -> {
             HttpCookie cookie = exchange.getRequest().getCookies().getFirst(ACCESS_TOKEN_COOKIE);
 
             if (cookie == null) {
@@ -54,6 +56,7 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                         return onError(exchange, HttpStatus.UNAUTHORIZED);
                     });
         };
+        return new OrderedGatewayFilter(filter, Ordered.LOWEST_PRECEDENCE);
     }
 
     private Mono<Void> onError(ServerWebExchange exchange, HttpStatus status) {
