@@ -16,6 +16,18 @@ export class WsAuthGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const client: Socket = context.switchToWs().getClient<Socket>();
 
+    const SKIP_AUTH = process.env.SKIP_WS_AUTH === 'true' || true;
+    if (SKIP_AUTH) {
+      (client.data as { user: unknown }).user = {
+        userId: 'test-user',
+        email: 'test@example.com',
+      };
+      this.logger.warn(
+        `⚠️  테스트 모드: 인증을 건너뛰고 있습니다 (client ${client.id})`,
+      );
+      return true;
+    }
+
     const bearer =
       (client.handshake.auth?.token as string | undefined) ??
       client.handshake.headers?.authorization;

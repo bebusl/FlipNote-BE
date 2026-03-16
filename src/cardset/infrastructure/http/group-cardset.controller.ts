@@ -36,7 +36,15 @@ export class GroupCardsetController {
       parseInt(userId),
     );
     const content = items.map(
-      ({ cardset, imageUrl, liked, bookmarked, managers, likeCount, bookmarkCount }) =>
+      ({
+        cardset,
+        imageUrl,
+        liked,
+        bookmarked,
+        managers,
+        likeCount,
+        bookmarkCount,
+      }) =>
         CardsetListItemResponse.from(
           cardset,
           imageUrl,

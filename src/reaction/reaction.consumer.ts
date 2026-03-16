@@ -5,7 +5,11 @@ import { CARDSET_METADATA_REPOSITORY } from '../cardset/domain/repository/cardse
 import { Inject } from '@nestjs/common';
 
 interface ReactionMessage {
-  eventType: 'LIKE_ADDED' | 'LIKE_REMOVED' | 'BOOKMARK_ADDED' | 'BOOKMARK_REMOVED';
+  eventType:
+    | 'LIKE_ADDED'
+    | 'LIKE_REMOVED'
+    | 'BOOKMARK_ADDED'
+    | 'BOOKMARK_REMOVED';
   targetType: string;
   targetId: number;
   userId: number;
@@ -34,7 +38,9 @@ export class ReactionConsumer {
     if (msg.targetType !== 'CARD_SET') return;
 
     const cardSetId = Number(msg.targetId);
-    this.logger.log(`Reaction event: ${msg.eventType} for cardSetId=${cardSetId}`);
+    this.logger.log(
+      `Reaction event: ${msg.eventType} for cardSetId=${cardSetId}`,
+    );
 
     switch (msg.eventType) {
       case 'LIKE_ADDED':

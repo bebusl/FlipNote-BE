@@ -71,7 +71,9 @@ export class ReactionGrpcClient implements OnModuleInit {
         userId,
       }),
     );
-    return new Map(Object.entries(result.results).map(([k, v]) => [Number(k), v]));
+    return new Map(
+      Object.entries(result.results).map(([k, v]) => [Number(k), v]),
+    );
   }
 
   async areBookmarked(
@@ -85,6 +87,8 @@ export class ReactionGrpcClient implements OnModuleInit {
         userId,
       }),
     );
-    return new Map(Object.entries(result.results).map(([k, v]) => [Number(k), v]));
+    return new Map(
+      Object.entries(result.results).map(([k, v]) => [Number(k), v]),
+    );
   }
 }

@@ -1,63 +1,57 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import * as Y from 'yjs';
-import { YJS_DOCUMENT_REPOSITORY } from '../domain/repository/yjs-document.repository';
-import type { IYjsDocumentRepository } from '../domain/repository/yjs-document.repository';
-import { YjsDocument } from '../domain/model/yjs-document';
+import { YjsDocumentService } from '../infrastructure/redis/yjs-document.service';
+import { CardsetContentOrmEntity } from '../infrastructure/persistence/orm/cardset-content.orm-entity';
 
 @Injectable()
 export class CollaborationUseCase {
   private readonly logger = new Logger(CollaborationUseCase.name);
-  private documentCache = new Map<number, Y.Doc>();
-  private persistDebounceMap = new Map<number, NodeJS.Timeout>();
 
   constructor(
-    @Inject(YJS_DOCUMENT_REPOSITORY)
-    private readonly yjsDocumentRepository: IYjsDocumentRepository,
+    private readonly yjsDocumentService: YjsDocumentService,
+    @InjectRepository(CardsetContentOrmEntity)
+    private readonly cardsetContentRepository: Repository<CardsetContentOrmEntity>,
   ) {}
 
   async getOrCreateDocument(cardsetId: number): Promise<Y.Doc> {
-    if (this.documentCache.has(cardsetId)) {
-      return this.documentCache.get(cardsetId)!;
+    const fromRedis = await this.yjsDocumentService.loadDocument(
+      cardsetId.toString(),
+    );
+    if (fromRedis) return fromRedis;
+
+    const fromDb = await this.loadCardsetContentFromDB(cardsetId);
+    if (fromDb) {
+      await this.yjsDocumentService.saveDocument(cardsetId.toString(), fromDb);
+      return fromDb;
     }
 
-    const stored = await this.yjsDocumentRepository.findByCardsetId(cardsetId);
-    let doc: Y.Doc;
-
-    if (stored) {
-      doc = new Y.Doc();
-      Y.applyUpdate(doc, stored.documentData);
-      this.logger.log(`Loaded Yjs document for cardset ${cardsetId} from DB`);
-    } else {
-      doc = new Y.Doc();
-      await this.persistDocument(cardsetId, doc);
-      this.logger.log(`Created new Yjs document for cardset ${cardsetId}`);
-    }
-
-    doc.on('update', () => {
-      const existing = this.persistDebounceMap.get(cardsetId);
-      if (existing) clearTimeout(existing);
-      this.persistDebounceMap.set(
-        cardsetId,
-        setTimeout(() => {
-          void this.persistDocument(cardsetId, doc);
-          this.persistDebounceMap.delete(cardsetId);
-        }, 500),
-      );
-    });
-
-    this.documentCache.set(cardsetId, doc);
+    const doc = new Y.Doc();
+    await this.yjsDocumentService.saveDocument(cardsetId.toString(), doc);
     return doc;
   }
 
   async applyUpdate(cardsetId: number, update: number[]): Promise<Uint8Array> {
     const doc = await this.getOrCreateDocument(cardsetId);
-    Y.applyUpdate(doc, new Uint8Array(update));
+    const updateArr = new Uint8Array(update);
+    Y.applyUpdate(doc, updateArr);
+    await this.yjsDocumentService.saveUpdate(cardsetId.toString(), updateArr);
     return Y.encodeStateAsUpdate(doc);
   }
 
   async getState(cardsetId: number): Promise<Uint8Array> {
     const doc = await this.getOrCreateDocument(cardsetId);
     return Y.encodeStateAsUpdate(doc);
+  }
+
+  async getCards(
+    cardsetId: number,
+  ): Promise<{ id: string; question: string; answer: string }[]> {
+    const doc = await this.getOrCreateDocument(cardsetId);
+    return doc
+      .getArray<{ id: string; question: string; answer: string }>('cards')
+      .toArray();
   }
 
   async syncCardsFromDB(
@@ -86,38 +80,69 @@ export class CollaborationUseCase {
     }));
 
     cardsArray.insert(0, yjsCards);
+    await this.yjsDocumentService.saveDocument(cardsetId.toString(), doc);
     this.logger.log(
       `Synced ${cards.length} cards to Yjs for cardset ${cardsetId}`,
     );
   }
 
-  async deleteDocument(cardsetId: number): Promise<void> {
-    await this.yjsDocumentRepository.deleteByCardsetId(cardsetId);
-    this.documentCache.delete(cardsetId);
-    this.logger.log(`Deleted Yjs document for cardset ${cardsetId}`);
+  async saveCardsetContent(cardSetId: number): Promise<void> {
+    const doc = await this.yjsDocumentService.loadDocument(
+      cardSetId.toString(),
+    );
+    if (!doc) {
+      throw new NotFoundException('Cardset snapshot not found in Redis');
+    }
+
+    const jsonContent = JSON.stringify(doc.toJSON() ?? {});
+
+    let content = await this.cardsetContentRepository.findOne({
+      where: { cardsetId: cardSetId },
+    });
+    if (!content) {
+      content = this.cardsetContentRepository.create({
+        cardsetId: cardSetId,
+        content: '',
+      });
+    }
+    content.content = jsonContent;
+    await this.cardsetContentRepository.save(content);
+
+    await this.yjsDocumentService.flushIncrementalHistory(cardSetId.toString());
+    this.logger.log(`Saved cardset ${cardSetId} content to DB`);
   }
 
-  private async persistDocument(cardsetId: number, doc: Y.Doc): Promise<void> {
+  async loadCardsetContentFromDB(cardSetId: number): Promise<Y.Doc | null> {
     try {
-      const state = Y.encodeStateAsUpdate(doc);
-      const stored =
-        await this.yjsDocumentRepository.findByCardsetId(cardsetId);
+      const cardsetContent = await this.cardsetContentRepository.findOne({
+        where: { cardsetId: cardSetId },
+      });
 
-      if (stored) {
-        const updated = stored.withNewData(Buffer.from(state));
-        await this.yjsDocumentRepository.update(stored.id, updated);
-      } else {
-        const newDoc = YjsDocument.create({
-          cardsetId,
-          documentData: Buffer.from(state),
-        });
-        await this.yjsDocumentRepository.save(newDoc);
+      if (!cardsetContent || !cardsetContent.content) return null;
+
+      const jsonContent = JSON.parse(cardsetContent.content) as Record<
+        string,
+        unknown
+      >;
+      const doc = new Y.Doc();
+      if (jsonContent && typeof jsonContent === 'object') {
+        const yMap = doc.getMap('content');
+        for (const [key, value] of Object.entries(jsonContent)) {
+          yMap.set(key, value);
+        }
       }
-    } catch (error) {
-      this.logger.error(
-        `Failed to persist Yjs document for cardset ${cardsetId}:`,
-        error,
-      );
+      return doc;
+    } catch {
+      return null;
     }
+  }
+
+  async deleteDocument(cardsetId: number): Promise<void> {
+    await this.cardsetContentRepository.delete({ cardsetId });
+    await this.yjsDocumentService.saveDocument(
+      cardsetId.toString(),
+      new Y.Doc(),
+    );
+    this.logger.log(`Deleted Yjs document for cardset ${cardsetId}`);
   }
 }

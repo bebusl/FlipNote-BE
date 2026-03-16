@@ -21,6 +21,7 @@ import { UserGrpcClient } from '../infrastructure/grpc/user-grpc.client';
 import type { UserInfo } from '../infrastructure/grpc/user-grpc.client';
 import { CreateCardsetRequest } from './dto/request/create-cardset.request';
 import { UpdateCardsetRequest } from './dto/request/update-cardset.request';
+import { CollaborationUseCase } from '../../collaboration/application/collaboration.use-case';
 
 @Injectable()
 export class CardsetUseCase {
@@ -39,6 +40,7 @@ export class CardsetUseCase {
     private readonly dataSource: DataSource,
     @Inject(CARDSET_METADATA_REPOSITORY)
     private readonly metadataRepository: ICardSetMetadataRepository,
+    private readonly collaborationUseCase: CollaborationUseCase,
   ) {}
 
   private async checkIsManager(
@@ -58,7 +60,6 @@ export class CardsetUseCase {
   async create(userId: number, dto: CreateCardsetRequest): Promise<Cardset> {
     await this.groupGrpcClient.checkUserInGroup(dto.groupId, userId);
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const additionalManagerIds: number[] = dto.managerIds ?? [];
     for (const managerId of additionalManagerIds) {
       await this.groupGrpcClient.checkUserInGroup(dto.groupId, managerId);
@@ -110,11 +111,11 @@ export class CardsetUseCase {
     cardSetIds: number[],
   ): Promise<Map<number, UserInfo[]>> {
     if (cardSetIds.length === 0 || this.skipUserGrpc) return new Map();
-    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
+
     const managers: CardsetManager[] =
       await this.cardsetManagerRepository.findByCardSetIds(cardSetIds);
     const userIds: number[] = [...new Set(managers.map((m) => m.userId))];
-    /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
+
     const users = await this.userGrpcClient.getUsersByIds(userIds);
     const userMap = new Map(users.map((u) => [Number(u.id), u]));
     const result = new Map<number, UserInfo[]>();
@@ -249,11 +250,11 @@ export class CardsetUseCase {
     }[]
   > {
     await this.groupGrpcClient.checkUserInGroup(groupId, userId);
-    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
+
     const cardsets: Cardset[] =
       await this.cardsetRepository.findByGroupId(groupId);
     const ids: number[] = cardsets.map((c) => c.id);
-    /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
+
     const [metadataMap, likedMap, bookmarkedMap, managersMap] =
       await Promise.all([
         this.metadataRepository.findByCardSetIds(ids),
@@ -308,7 +309,6 @@ export class CardsetUseCase {
 
     return this.dataSource.transaction(async (manager) => {
       if (dto.managerIds !== undefined) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const newManagerIds: number[] = dto.managerIds;
         for (const managerId of newManagerIds) {
           await this.groupGrpcClient.checkUserInGroup(
@@ -403,5 +403,16 @@ export class CardsetUseCase {
       const updatedCardset = cardset.changeCardCount(newCardCount);
       return this.cardsetRepository.update(id, updatedCardset);
     });
+  }
+
+  async saveCards(cardSetId: number, userId: number): Promise<void> {
+    await this.checkIsManager(cardSetId, userId);
+    await this.collaborationUseCase.saveCardsetContent(cardSetId);
+  }
+
+  async findCardsFromYjs(
+    cardSetId: number,
+  ): Promise<{ id: string; question: string; answer: string }[]> {
+    return this.collaborationUseCase.getCards(cardSetId);
   }
 }

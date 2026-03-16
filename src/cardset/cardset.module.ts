@@ -30,6 +30,7 @@ import { ImageGrpcClient } from './infrastructure/grpc/image-grpc.client';
 import { ReactionGrpcClient } from './infrastructure/grpc/reaction-grpc.client';
 import { UserGrpcClient } from './infrastructure/grpc/user-grpc.client';
 import { GrpcClientModule } from '../shared/grpc/grpc-client.module';
+import { CollaborationModule } from '../collaboration/collaboration.module';
 
 @Module({
   imports: [
@@ -40,8 +41,14 @@ import { GrpcClientModule } from '../shared/grpc/grpc-client.module';
       CardSetMetadataOrmEntity,
     ]),
     GrpcClientModule,
+    CollaborationModule,
   ],
-  controllers: [CardsetController, CardController, GroupCardsetController, CardsetGrpcController],
+  controllers: [
+    CardsetController,
+    CardController,
+    GroupCardsetController,
+    CardsetGrpcController,
+  ],
   providers: [
     { provide: CARDSET_REPOSITORY, useClass: CardsetRepositoryImpl },
     { provide: CARD_REPOSITORY, useClass: CardRepositoryImpl },

@@ -8,6 +8,7 @@ import {
   Param,
   Headers,
 } from '@nestjs/common';
+
 import {
   ApiTags,
   ApiOperation,
@@ -21,13 +22,14 @@ import { UpdateCardsetRequest } from '../../application/dto/request/update-cards
 import { CardsetCreateResponse } from '../../application/dto/response/cardset-create.response';
 import { CardsetResponse } from '../../application/dto/response/cardset.response';
 import { ManagerInfoResponse } from '../../application/dto/response/manager-info.response';
+import { YjsCardResponse } from '../../application/dto/response/yjs-card.response';
 import { ApiResponse } from '../../../shared/common/api-response';
 
 @ApiExtraModels(CardsetResponse, ManagerInfoResponse)
 @ApiTags('card-sets')
 @Controller('card-sets')
 export class CardsetController {
-  constructor(private readonly cardsetUseCase: CardsetUseCase) { }
+  constructor(private readonly cardsetUseCase: CardsetUseCase) {}
 
   @Post()
   @ApiOperation({ summary: '카드셋 생성' })
@@ -145,6 +147,37 @@ export class CardsetController {
   ): Promise<ApiResponse<null>> {
     await this.cardsetUseCase.remove(parseInt(cardsetId), parseInt(userId));
     return ApiResponse.success(null, '삭제되었습니다.');
+  }
+
+  @Get(':cardsetId/cards')
+  @ApiOperation({ summary: '카드셋의 카드 목록 조회' })
+  @ApiParam({ name: 'cardsetId', type: Number })
+  @SwaggerApiResponse({
+    status: 200,
+    description: '조회 성공',
+    type: [YjsCardResponse],
+  })
+  async findCards(
+    @Headers('X-USER-ID') _userId: string,
+    @Param('cardsetId') cardsetId: string,
+  ): Promise<ApiResponse<YjsCardResponse[]>> {
+    const cards = await this.cardsetUseCase.findCardsFromYjs(
+      parseInt(cardsetId),
+    );
+    return ApiResponse.success(cards.map((c) => YjsCardResponse.from(c)));
+  }
+
+  @Post(':cardsetId')
+  @ApiOperation({ summary: '카드 편집 저장' })
+  @ApiParam({ name: 'cardsetId', type: Number })
+  @SwaggerApiResponse({ status: 200, description: '저장 성공' })
+  @SwaggerApiResponse({ status: 403, description: '매니저 권한 없음' })
+  async saveCards(
+    @Headers('X-USER-ID') userId: string,
+    @Param('cardsetId') cardsetId: string,
+  ): Promise<ApiResponse<null>> {
+    await this.cardsetUseCase.saveCards(parseInt(cardsetId), parseInt(userId));
+    return ApiResponse.success(null);
   }
 
   // @Put(':cardsetId/card-count')

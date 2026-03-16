@@ -36,8 +36,15 @@ export class CardRepositoryImpl implements ICardRepository {
     return CardMapper.toDomain(saved);
   }
 
-  async update(id: number, card: Partial<Card>): Promise<Card | null> {
-    await this.ormRepository.update(id, CardMapper.toOrm(card as Card));
+  async update(
+    id: number,
+    card: Partial<Card>,
+    manager?: EntityManager,
+  ): Promise<Card | null> {
+    const repo = manager
+      ? manager.getRepository(CardOrmEntity)
+      : this.ormRepository;
+    await repo.update(id, CardMapper.toOrm(card as Card));
     return this.findById(id);
   }
 
