@@ -99,7 +99,6 @@ spring:
                 patterns:
                   - /v1/groups/**
                   - /v1/joins/**
-                  - /v1/group-invitations
           filters:
             - AuthenticationFilter
 
@@ -182,4 +181,4 @@ management:
 
 logging:
   level:
-    flipnote.apigateway: INFO
+    flipnote.apigateway: DEBUG
