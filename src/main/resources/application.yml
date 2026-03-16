@@ -151,6 +151,27 @@ spring:
           filters:
             - AuthenticationFilter
 
+        - id: notification-private
+          uri: http://notification-service:8086
+          predicates:
+            - name: Path
+              args:
+                patterns:
+                  - /v1/notifications/**
+          filters:
+            - AuthenticationFilter
+
+        - id: notification-swagger
+          uri: http://notification-service:8086
+          predicates:
+            - name: Path
+              args:
+                patterns:
+                  - /notifications/swagger-ui.html
+                  - /notifications/swagger-ui/**
+                  - /notifications/v3/api-docs
+                  - /notifications/v3/api-docs/**
+
 app:
   user-service:
     url: http://user-service:8081
