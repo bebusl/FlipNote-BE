@@ -30,4 +30,19 @@ export class CardResponse {
     res.updatedAt = card.updatedAt;
     return res;
   }
+
+  static fromYjs(card: {
+    id: string;
+    question: string;
+    answer: string;
+  }): CardResponse {
+    const res = new CardResponse();
+    res.id = Number(card.id);
+    res.content = card.question;
+    res.order = 0;
+    res.cardsetId = 0;
+    res.createdAt = new Date();
+    res.updatedAt = new Date();
+    return res;
+  }
 }

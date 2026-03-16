@@ -10,9 +10,7 @@ export interface UserInfo {
 }
 
 interface UserQueryService {
-  getUsers(data: {
-    userIds: number[];
-  }): Observable<{ users: UserInfo[] }>;
+  getUsers(data: { userIds: number[] }): Observable<{ users: UserInfo[] }>;
 }
 
 @Injectable()
@@ -30,9 +28,7 @@ export class UserGrpcClient implements OnModuleInit {
 
   async getUsersByIds(userIds: number[]): Promise<UserInfo[]> {
     if (userIds.length === 0) return [];
-    const result = await firstValueFrom(
-      this.userService.getUsers({ userIds }),
-    );
+    const result = await firstValueFrom(this.userService.getUsers({ userIds }));
     return result.users;
   }
 }

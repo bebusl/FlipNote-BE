@@ -16,7 +16,10 @@ import { CARDSET_METADATA_REPOSITORY } from '../cardset/domain/repository/cardse
     TypeOrmModule.forFeature([CardSetMetadataOrmEntity]),
   ],
   providers: [
-    { provide: CARDSET_METADATA_REPOSITORY, useClass: CardSetMetadataRepositoryImpl },
+    {
+      provide: CARDSET_METADATA_REPOSITORY,
+      useClass: CardSetMetadataRepositoryImpl,
+    },
     ReactionConsumer,
   ],
   exports: [CARDSET_METADATA_REPOSITORY],

@@ -5,7 +5,9 @@ import { ICardSetMetadataRepository } from '../../domain/repository/cardset-meta
 import { CardSetMetadataOrmEntity } from './orm/cardset-metadata.orm-entity';
 
 @Injectable()
-export class CardSetMetadataRepositoryImpl implements ICardSetMetadataRepository {
+export class CardSetMetadataRepositoryImpl
+  implements ICardSetMetadataRepository
+{
   constructor(
     @InjectRepository(CardSetMetadataOrmEntity)
     private readonly ormRepository: Repository<CardSetMetadataOrmEntity>,

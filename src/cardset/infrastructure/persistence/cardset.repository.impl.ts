@@ -25,7 +25,14 @@ export class CardsetRepositoryImpl implements ICardsetRepository {
   }
 
   async findAllPaged(options: CardsetPageOptions): Promise<CardsetPageResult> {
-    const { page, size, sortBy = 'createdAt', order = 'DESC', keyword, category } = options;
+    const {
+      page,
+      size,
+      sortBy = 'createdAt',
+      order = 'DESC',
+      keyword,
+      category,
+    } = options;
 
     const qb = this.ormRepository.createQueryBuilder('cs');
 
@@ -42,7 +49,9 @@ export class CardsetRepositoryImpl implements ICardsetRepository {
       cardCount: 'cs.cardCount',
     };
     const sortField = allowedSortFields[sortBy] ?? 'cs.createdAt';
-    qb.orderBy(sortField, order).skip(page * size).take(size);
+    qb.orderBy(sortField, order)
+      .skip(page * size)
+      .take(size);
 
     const [orms, total] = await qb.getManyAndCount();
     return { items: orms.map((orm) => CardsetMapper.toDomain(orm)), total };

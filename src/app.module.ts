@@ -10,7 +10,8 @@ import { CardsetOrmEntity } from './cardset/infrastructure/persistence/orm/cards
 import { CardOrmEntity } from './cardset/infrastructure/persistence/orm/card.orm-entity';
 import { CardsetManagerOrmEntity } from './cardset/infrastructure/persistence/orm/cardset-manager.orm-entity';
 import { CardSetMetadataOrmEntity } from './cardset/infrastructure/persistence/orm/cardset-metadata.orm-entity';
-import { YjsDocumentOrmEntity } from './collaboration/infrastructure/persistence/orm/yjs-document.orm-entity';
+import { CardsetContentOrmEntity } from './collaboration/infrastructure/persistence/orm/cardset-content.orm-entity';
+import { CardsetIncrementalOrmEntity } from './collaboration/infrastructure/persistence/orm/cardset-incremental.orm-entity';
 
 @Module({
   imports: [
@@ -27,7 +28,8 @@ import { YjsDocumentOrmEntity } from './collaboration/infrastructure/persistence
         CardOrmEntity,
         CardsetManagerOrmEntity,
         CardSetMetadataOrmEntity,
-        YjsDocumentOrmEntity,
+        CardsetContentOrmEntity,
+        CardsetIncrementalOrmEntity,
       ],
       synchronize: true,
     }),

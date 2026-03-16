@@ -5,7 +5,7 @@ import { CardUseCase } from '../../application/card.use-case';
 @ApiTags('cards')
 @Controller('cards')
 export class CardController {
-  constructor(private readonly cardUseCase: CardUseCase) { }
+  constructor(private readonly cardUseCase: CardUseCase) {}
 
   // @Post()
   // @ApiOperation({ summary: '카드 생성' })
