@@ -12,7 +12,6 @@ import {
   ApiTags,
   ApiOperation,
   ApiResponse as SwaggerApiResponse,
-  ApiHeader,
   ApiParam,
 } from '@nestjs/swagger';
 import { CardsetUseCase } from '../../application/cardset.use-case';
@@ -23,7 +22,6 @@ import { CardsetResponse } from '../../application/dto/response/cardset.response
 import { ApiResponse } from '../../../shared/common/api-response';
 
 @ApiTags('card-sets')
-@ApiHeader({ name: 'X-USER-ID', required: true, description: '유저 ID' })
 @Controller('card-sets')
 export class CardsetController {
   constructor(private readonly cardsetUseCase: CardsetUseCase) {}
@@ -56,8 +54,8 @@ export class CardsetController {
   ): Promise<ApiResponse<CardsetResponse[]>> {
     const results = await this.cardsetUseCase.findAll(parseInt(userId));
     return ApiResponse.success(
-      results.map(({ cardset, imageUrl }) =>
-        CardsetResponse.from(cardset, imageUrl),
+      results.map(({ cardset, imageUrl, likeCount, bookmarkCount }) =>
+        CardsetResponse.from(cardset, imageUrl, likeCount, bookmarkCount),
       ),
     );
   }
@@ -80,7 +78,14 @@ export class CardsetController {
       parseInt(userId),
     );
     return ApiResponse.success(
-      result ? CardsetResponse.from(result.cardset, result.imageUrl) : null,
+      result
+        ? CardsetResponse.from(
+            result.cardset,
+            result.imageUrl,
+            result.likeCount,
+            result.bookmarkCount,
+          )
+        : null,
     );
   }
 

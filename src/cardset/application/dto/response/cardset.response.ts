@@ -30,13 +30,24 @@ export class CardsetResponse {
   @ApiProperty({ example: 10 })
   cardCount!: number;
 
+  @ApiProperty({ example: 0 })
+  likeCount!: number;
+
+  @ApiProperty({ example: 0 })
+  bookmarkCount!: number;
+
   @ApiProperty()
   createdAt!: Date;
 
   @ApiProperty()
   updatedAt!: Date;
 
-  static from(cardset: Cardset, imageUrl = ''): CardsetResponse {
+  static from(
+    cardset: Cardset,
+    imageUrl = '',
+    likeCount = 0,
+    bookmarkCount = 0,
+  ): CardsetResponse {
     const res = new CardsetResponse();
     res.id = cardset.id;
     res.name = cardset.name;
@@ -47,6 +58,8 @@ export class CardsetResponse {
     res.imageRefId = cardset.imageRefId;
     res.imageUrl = imageUrl;
     res.cardCount = cardset.cardCount;
+    res.likeCount = likeCount;
+    res.bookmarkCount = bookmarkCount;
     res.createdAt = cardset.createdAt;
     res.updatedAt = cardset.updatedAt;
     return res;
