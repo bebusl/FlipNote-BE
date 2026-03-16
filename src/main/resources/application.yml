@@ -150,7 +150,7 @@ spring:
         - id: cardset-websocket
           uri: ws://cardset-service:8085
           predicates:
-            - Path=/card-sets/**
+            - Path=/v1/card-sets/ws/**
           filters:
             - AuthenticationFilter
 
