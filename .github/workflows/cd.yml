@@ -34,17 +34,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            export IMAGE_TAG=${{ steps.meta.outputs.version }}
-            bash ~/deploy-nestjs/deploy-flipnote.sh
-
       - name: Notify Slack on Success
         if: success()
         uses: 8398a7/action-slack@v3
