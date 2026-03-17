@@ -18,7 +18,7 @@ import { CollaborationUseCase } from '../../application/collaboration.use-case';
 
 @UseGuards(WsAuthGuard)
 @WebSocketGateway({
-  cors: { origin: '*' },
+  cors: false,
   path: '/v1/card-sets/ws',
   pingTimeout: 60000,
   pingInterval: 25000,
