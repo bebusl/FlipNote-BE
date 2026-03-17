@@ -17,8 +17,8 @@ export class CardsetGrpcController {
     data: IsCardSetViewableRequest,
   ): Promise<IsCardSetViewableResponse> {
     const viewable = await this.cardsetUseCase.isCardSetViewable(
-      data.cardSetId,
-      data.userId,
+      Number(data.cardSetId),
+      Number(data.userId),
     );
     return { viewable };
   }
@@ -28,8 +28,8 @@ export class CardsetGrpcController {
     data: GetCardSetsByIdsRequest,
   ): Promise<GetCardSetsByIdsResponse> {
     const cardsets = await this.cardsetUseCase.getCardSetsByIds(
-      data.cardSetIds,
-      data.userId,
+      data.cardSetIds.map(Number),
+      Number(data.userId),
     );
     return {
       cardSets: cardsets.map((c) => ({
