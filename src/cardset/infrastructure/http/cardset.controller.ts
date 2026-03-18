@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   Headers,
+  HttpCode,
 } from '@nestjs/common';
 
 import {
@@ -17,19 +18,44 @@ import {
   ApiExtraModels,
 } from '@nestjs/swagger';
 import { CardsetUseCase } from '../../application/cardset.use-case';
+import { CardsetSearchRequest } from '../../application/dto/request/cardset-search.request';
 import { CreateCardsetRequest } from '../../application/dto/request/create-cardset.request';
 import { UpdateCardsetRequest } from '../../application/dto/request/update-cardset.request';
 import { CardsetCreateResponse } from '../../application/dto/response/cardset-create.response';
+import { CardsetListItemResponse } from '../../application/dto/response/cardset-list-item.response';
 import { CardsetResponse } from '../../application/dto/response/cardset.response';
 import { ManagerInfoResponse } from '../../application/dto/response/manager-info.response';
 import { YjsCardResponse } from '../../application/dto/response/yjs-card.response';
 import { ApiResponse } from '../../../shared/common/api-response';
+import { PagedResponse } from '../../../shared/common/paged-response';
 
 @ApiExtraModels(CardsetResponse, ManagerInfoResponse)
 @ApiTags('card-sets')
 @Controller('card-sets')
 export class CardsetController {
   constructor(private readonly cardsetUseCase: CardsetUseCase) {}
+
+  @Post('search')
+  @HttpCode(200)
+  @ApiOperation({ summary: '카드셋 전체 목록 조회 (페이징)' })
+  @SwaggerApiResponse({
+    status: 200,
+    description: '조회 성공',
+  })
+  async search(
+    @Headers('X-USER-ID') userId: string,
+    @Body() dto: CardsetSearchRequest,
+  ): Promise<ApiResponse<PagedResponse<CardsetListItemResponse>>> {
+    const { items, total, page, size } = await this.cardsetUseCase.findAllPaged(
+      dto,
+      parseInt(userId),
+    );
+    const responseItems = items.map(
+      ({ cardset, imageUrl, likeCount, bookmarkCount, liked, bookmarked, managers }) =>
+        CardsetListItemResponse.from(cardset, imageUrl, liked, bookmarked, managers, likeCount, bookmarkCount),
+    );
+    return ApiResponse.success(PagedResponse.of(responseItems, total, page, size));
+  }
 
   @Post()
   @ApiOperation({ summary: '카드셋 생성' })

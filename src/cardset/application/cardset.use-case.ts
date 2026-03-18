@@ -22,6 +22,7 @@ import type { UserInfo } from '../infrastructure/grpc/user-grpc.client';
 import { CreateCardsetRequest } from './dto/request/create-cardset.request';
 import { UpdateCardsetRequest } from './dto/request/update-cardset.request';
 import { CollaborationUseCase } from '../../collaboration/application/collaboration.use-case';
+import { CardsetSearchRequest } from './dto/request/cardset-search.request';
 
 @Injectable()
 export class CardsetUseCase {
@@ -127,6 +128,84 @@ export class CardsetUseCase {
       result.set(m.cardSetId, list);
     }
     return result;
+  }
+
+  async findAllPaged(
+    req: CardsetSearchRequest,
+    userId: number,
+  ): Promise<{
+    items: {
+      cardset: Cardset;
+      imageUrl: string;
+      likeCount: number;
+      bookmarkCount: number;
+      liked: boolean;
+      bookmarked: boolean;
+      managers: UserInfo[];
+    }[];
+    total: number;
+    page: number;
+    size: number;
+  }> {
+    const page = req.page ?? 1;
+    const size = req.size ?? 10;
+
+    const { items, total } = await this.cardsetRepository.findAllPaged({
+      page: page - 1,
+      size,
+      sortBy: req.sortBy,
+      order: (req.order?.toUpperCase() as 'ASC' | 'DESC') ?? 'DESC',
+      keyword: req.keyword,
+      category: req.category,
+    });
+
+    const visibleCardsets: Cardset[] = [];
+    for (const cardset of items) {
+      const canView =
+        cardset.visibility === Visibility.PUBLIC ||
+        (await this.groupGrpcClient.isUserInGroup(cardset.groupId, userId));
+      if (canView) visibleCardsets.push(cardset);
+    }
+
+    const ids = visibleCardsets.map((c) => c.id);
+    const [metadataMap, likedMap, bookmarkedMap, managersMap] =
+      await Promise.all([
+        this.metadataRepository.findByCardSetIds(ids),
+        this.skipReactionGrpc
+          ? Promise.resolve(new Map<number, boolean>())
+          : this.reactionGrpcClient.areLiked(ids, userId),
+        this.skipReactionGrpc
+          ? Promise.resolve(new Map<number, boolean>())
+          : this.reactionGrpcClient.areBookmarked(ids, userId),
+        this.getManagersForCardSets(ids),
+      ]);
+
+    const result: {
+      cardset: Cardset;
+      imageUrl: string;
+      likeCount: number;
+      bookmarkCount: number;
+      liked: boolean;
+      bookmarked: boolean;
+      managers: UserInfo[];
+    }[] = [];
+    for (const cardset of visibleCardsets) {
+      const imageUrl = cardset.imageRefId
+        ? await this.imageGrpcClient.getImageUrl(cardset.id)
+        : this.defaultImageUrl;
+      const meta = metadataMap.get(cardset.id);
+      result.push({
+        cardset,
+        imageUrl,
+        likeCount: meta?.likeCount ?? 0,
+        bookmarkCount: meta?.bookmarkCount ?? 0,
+        liked: likedMap.get(cardset.id) ?? false,
+        bookmarked: bookmarkedMap.get(cardset.id) ?? false,
+        managers: managersMap.get(cardset.id) ?? [],
+      });
+    }
+
+    return { items: result, total, page, size };
   }
 
   async findAll(userId: number): Promise<
