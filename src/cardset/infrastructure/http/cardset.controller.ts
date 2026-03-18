@@ -60,7 +60,7 @@ export class CardsetController {
     name: 'sortBy',
     required: false,
     example: 'createdAt',
-    description: 'createdAt | name | cardCount',
+    description: 'id | like | book',
   })
   @ApiQuery({
     name: 'order',
