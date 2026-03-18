@@ -48,7 +48,10 @@ export class CardsetRepositoryImpl implements ICardsetRepository {
       qb.andWhere('cs.groupId = :groupId', { groupId });
     }
     if (keyword) {
-      qb.andWhere('cs.name LIKE :keyword', { keyword: `%${keyword}%` });
+      qb.andWhere(
+        '(cs.name LIKE :keyword OR cs.hashtag LIKE :keyword)',
+        { keyword: `%${keyword}%` },
+      );
     }
     if (category) {
       qb.andWhere('cs.category = :category', { category });
