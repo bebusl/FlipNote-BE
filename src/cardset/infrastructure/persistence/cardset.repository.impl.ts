@@ -28,27 +28,41 @@ export class CardsetRepositoryImpl implements ICardsetRepository {
     const {
       page,
       size,
-      sortBy = 'createdAt',
+      sortBy = 'id',
       order = 'DESC',
       keyword,
       category,
+      groupId,
     } = options;
+
+    const metadataSortFields = new Set(['like', 'book']);
+    const needsMetadataJoin = metadataSortFields.has(sortBy);
 
     const qb = this.ormRepository.createQueryBuilder('cs');
 
+    if (needsMetadataJoin) {
+      qb.leftJoin('card_set_metadata', 'meta', 'meta.card_set_id = cs.id');
+    }
+
+    if (groupId !== undefined) {
+      qb.andWhere('cs.groupId = :groupId', { groupId });
+    }
     if (keyword) {
-      qb.andWhere('cs.name LIKE :keyword', { keyword: `%${keyword}%` });
+      qb.andWhere(
+        '(cs.name LIKE :keyword OR cs.hashtag LIKE :keyword)',
+        { keyword: `%${keyword}%` },
+      );
     }
     if (category) {
       qb.andWhere('cs.category = :category', { category });
     }
 
     const allowedSortFields: Record<string, string> = {
-      createdAt: 'cs.createdAt',
-      name: 'cs.name',
-      cardCount: 'cs.cardCount',
+      id: 'cs.id',
+      like: 'COALESCE(meta.like_count, 0)',
+      book: 'COALESCE(meta.bookmark_count, 0)',
     };
-    const sortField = allowedSortFields[sortBy] ?? 'cs.createdAt';
+    const sortField = allowedSortFields[sortBy] ?? 'cs.id';
     qb.orderBy(sortField, order)
       .skip(page * size)
       .take(size);

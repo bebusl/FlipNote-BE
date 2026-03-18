@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   Headers,
 } from '@nestjs/common';
 
@@ -14,16 +15,20 @@ import {
   ApiOperation,
   ApiResponse as SwaggerApiResponse,
   ApiParam,
+  ApiQuery,
   ApiExtraModels,
 } from '@nestjs/swagger';
 import { CardsetUseCase } from '../../application/cardset.use-case';
+import { CardsetSearchRequest } from '../../application/dto/request/cardset-search.request';
 import { CreateCardsetRequest } from '../../application/dto/request/create-cardset.request';
 import { UpdateCardsetRequest } from '../../application/dto/request/update-cardset.request';
 import { CardsetCreateResponse } from '../../application/dto/response/cardset-create.response';
+import { CardsetListItemResponse } from '../../application/dto/response/cardset-list-item.response';
 import { CardsetResponse } from '../../application/dto/response/cardset.response';
 import { ManagerInfoResponse } from '../../application/dto/response/manager-info.response';
 import { YjsCardResponse } from '../../application/dto/response/yjs-card.response';
 import { ApiResponse } from '../../../shared/common/api-response';
+import { PagedResponse } from '../../../shared/common/paged-response';
 
 @ApiExtraModels(CardsetResponse, ManagerInfoResponse)
 @ApiTags('card-sets')
@@ -48,37 +53,54 @@ export class CardsetController {
   }
 
   @Get()
-  @ApiOperation({ summary: '카드셋 목록 조회' })
-  @SwaggerApiResponse({
-    status: 200,
-    description: '조회 성공',
-    type: [CardsetResponse],
+  @ApiOperation({ summary: '카드셋 목록 조회 (페이징)' })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'size', required: false, example: 10 })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    example: 'id',
+    description: 'id | like | book',
   })
+  @ApiQuery({
+    name: 'order',
+    required: false,
+    example: 'desc',
+    enum: ['asc', 'desc'],
+  })
+  @ApiQuery({ name: 'keyword', required: false, example: '영어' })
+  @ApiQuery({ name: 'category', required: false, example: '언어' })
+  @SwaggerApiResponse({ status: 200, description: '조회 성공' })
   async findAll(
     @Headers('X-USER-ID') userId: string,
-  ): Promise<ApiResponse<CardsetResponse[]>> {
-    const results = await this.cardsetUseCase.findAll(parseInt(userId));
-    return ApiResponse.success(
-      results.map(
-        ({
+    @Query() query: CardsetSearchRequest,
+  ): Promise<ApiResponse<PagedResponse<CardsetListItemResponse>>> {
+    const { items, total, page, size } = await this.cardsetUseCase.findAllPaged(
+      query,
+      parseInt(userId),
+    );
+    const responseItems = items.map(
+      ({
+        cardset,
+        imageUrl,
+        likeCount,
+        bookmarkCount,
+        liked,
+        bookmarked,
+        managers,
+      }) =>
+        CardsetListItemResponse.from(
           cardset,
           imageUrl,
-          likeCount,
-          bookmarkCount,
           liked,
           bookmarked,
           managers,
-        }) =>
-          CardsetResponse.from(
-            cardset,
-            imageUrl,
-            likeCount,
-            bookmarkCount,
-            liked,
-            bookmarked,
-            managers,
-          ),
-      ),
+          likeCount,
+          bookmarkCount,
+        ),
+    );
+    return ApiResponse.success(
+      PagedResponse.of(responseItems, total, page, size),
     );
   }
 

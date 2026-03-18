@@ -10,6 +10,7 @@ export type CardsetPageOptions = {
   order?: 'ASC' | 'DESC';
   keyword?: string;
   category?: string;
+  groupId?: number;
 };
 
 export type CardsetPageResult = {
