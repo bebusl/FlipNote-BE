@@ -167,6 +167,7 @@ export class CardsetUseCase {
         visibleCardsets.push(cardset);
         continue;
       }
+      if (isNaN(userId)) continue;
       try {
         const inGroup = await this.groupGrpcClient.isUserInGroup(
           cardset.groupId,
@@ -238,10 +239,20 @@ export class CardsetUseCase {
     const cardsets = await this.cardsetRepository.findAll();
     const visibleCardsets: Cardset[] = [];
     for (const cardset of cardsets) {
-      const canView =
-        cardset.visibility === Visibility.PUBLIC ||
-        (await this.groupGrpcClient.isUserInGroup(cardset.groupId, userId));
-      if (canView) visibleCardsets.push(cardset);
+      if (cardset.visibility === Visibility.PUBLIC) {
+        visibleCardsets.push(cardset);
+        continue;
+      }
+      if (isNaN(userId)) continue;
+      try {
+        const inGroup = await this.groupGrpcClient.isUserInGroup(
+          cardset.groupId,
+          userId,
+        );
+        if (inGroup) visibleCardsets.push(cardset);
+      } catch {
+        // 그룹 조회 실패 시 해당 카드셋 제외
+      }
     }
 
     const ids = visibleCardsets.map((c) => c.id);
@@ -378,10 +389,9 @@ export class CardsetUseCase {
     const cardset = await this.cardsetRepository.findById(id);
     if (!cardset) return null;
     if (cardset.visibility !== Visibility.PUBLIC) {
-      const inGroup = await this.groupGrpcClient.isUserInGroup(
-        cardset.groupId,
-        userId,
-      );
+      const inGroup =
+        !isNaN(userId) &&
+        (await this.groupGrpcClient.isUserInGroup(cardset.groupId, userId));
       if (!inGroup)
         throw new BusinessException(ErrorCode.CARDSET_ACCESS_DENIED);
     }

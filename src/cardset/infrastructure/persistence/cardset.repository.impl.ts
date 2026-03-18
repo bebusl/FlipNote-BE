@@ -35,12 +35,9 @@ export class CardsetRepositoryImpl implements ICardsetRepository {
       groupId,
     } = options;
 
-    const metadataSortFields = new Set(['like', 'book']);
-    const needsMetadataJoin = metadataSortFields.has(sortBy);
-
     const qb = this.ormRepository.createQueryBuilder('cs');
 
-    if (needsMetadataJoin) {
+    if (sortBy === 'like' || sortBy === 'book') {
       qb.leftJoin('card_set_metadata', 'meta', 'meta.card_set_id = cs.id');
     }
 
@@ -57,12 +54,16 @@ export class CardsetRepositoryImpl implements ICardsetRepository {
       qb.andWhere('cs.category = :category', { category });
     }
 
-    const allowedSortFields: Record<string, string> = {
-      id: 'cs.id',
-      like: 'COALESCE(meta.like_count, 0)',
-      book: 'COALESCE(meta.bookmark_count, 0)',
-    };
-    const sortField = allowedSortFields[sortBy] ?? 'cs.id';
+    let sortField: string;
+    if (sortBy === 'like') {
+      qb.addSelect('COALESCE(meta.like_count, 0)', 'like_count_sort');
+      sortField = 'like_count_sort';
+    } else if (sortBy === 'book') {
+      qb.addSelect('COALESCE(meta.bookmark_count, 0)', 'book_count_sort');
+      sortField = 'book_count_sort';
+    } else {
+      sortField = 'cs.id';
+    }
     qb.orderBy(sortField, order)
       .skip(page * size)
       .take(size);
