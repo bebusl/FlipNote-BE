@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { BusinessException } from '../../shared/common/business.exception';
 import { ErrorCode } from '../../shared/common/error-code';
@@ -26,6 +26,8 @@ import { CardsetSearchRequest } from './dto/request/cardset-search.request';
 
 @Injectable()
 export class CardsetUseCase {
+  private readonly logger = new Logger(CardsetUseCase.name);
+
   constructor(
     @Inject(CARDSET_REPOSITORY)
     private readonly cardsetRepository: ICardsetRepository,
@@ -585,6 +587,8 @@ export class CardsetUseCase {
   async findCardsFromYjs(
     cardSetId: number,
   ): Promise<{ id: string; question: string; answer: string }[]> {
-    return this.collaborationUseCase.getCards(cardSetId);
+    const cards = await this.collaborationUseCase.getCards(cardSetId);
+    this.logger.log(`[cardset:${cardSetId}] cards: ${JSON.stringify(cards)}`);
+    return cards;
   }
 }
