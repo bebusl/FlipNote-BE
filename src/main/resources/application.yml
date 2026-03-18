@@ -87,6 +87,13 @@ spring:
           filters:
             - AuthenticationFilter
 
+        - id: group-cardsets
+          uri: http://cardset-service:8085
+          predicates:
+            - Path=/v1/groups/*/card-sets
+          filters:
+            - AuthenticationFilter
+
         - id: group
           uri: http://group-service:8084
           predicates:
