@@ -32,6 +32,7 @@ export class CardsetRepositoryImpl implements ICardsetRepository {
       order = 'DESC',
       keyword,
       category,
+      groupId,
     } = options;
 
     const metadataSortFields = new Set(['like', 'book']);
@@ -40,13 +41,12 @@ export class CardsetRepositoryImpl implements ICardsetRepository {
     const qb = this.ormRepository.createQueryBuilder('cs');
 
     if (needsMetadataJoin) {
-      qb.leftJoin(
-        'card_set_metadata',
-        'meta',
-        'meta.card_set_id = cs.id',
-      );
+      qb.leftJoin('card_set_metadata', 'meta', 'meta.card_set_id = cs.id');
     }
 
+    if (groupId !== undefined) {
+      qb.andWhere('cs.groupId = :groupId', { groupId });
+    }
     if (keyword) {
       qb.andWhere('cs.name LIKE :keyword', { keyword: `%${keyword}%` });
     }
