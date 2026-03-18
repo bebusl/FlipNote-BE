@@ -49,9 +49,12 @@ export class CollaborationUseCase {
     cardsetId: number,
   ): Promise<{ id: string; question: string; answer: string }[]> {
     const doc = await this.getOrCreateDocument(cardsetId);
-    return doc
-      .getArray<{ id: string; question: string; answer: string }>('cards')
-      .toArray();
+    const raw = doc.getArray('cards').toArray();
+    return JSON.parse(JSON.stringify(raw)) as {
+      id: string;
+      question: string;
+      answer: string;
+    }[];
   }
 
   async syncCardsFromDB(
@@ -126,9 +129,9 @@ export class CollaborationUseCase {
       >;
       const doc = new Y.Doc();
       if (jsonContent && typeof jsonContent === 'object') {
-        const yMap = doc.getMap('content');
-        for (const [key, value] of Object.entries(jsonContent)) {
-          yMap.set(key, value);
+        const cards = jsonContent['cards'];
+        if (Array.isArray(cards) && cards.length > 0) {
+          doc.getArray('cards').insert(0, cards);
         }
       }
       return doc;
