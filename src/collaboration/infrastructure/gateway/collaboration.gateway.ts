@@ -20,12 +20,11 @@ import { CollaborationUseCase } from '../../application/collaboration.use-case';
 @WebSocketGateway({
   cors: false,
   path: '/v1/card-sets/ws',
-  pingTimeout: 60000,
+  pingTimeout: 10000,
   pingInterval: 25000,
 })
 export class CollaborationGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+  implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;
 
@@ -39,7 +38,7 @@ export class CollaborationGateway
   constructor(
     private readonly yjsDocumentService: YjsDocumentService,
     private readonly collaborationUseCase: CollaborationUseCase,
-  ) {}
+  ) { }
 
   handleConnection(client: Socket) {
     this.logger.log(`[클라이언트 연결] clientId=${client.id}`);
@@ -330,8 +329,14 @@ export class CollaborationGateway
     if (activeCount > 0) return;
 
     try {
-      await this.collaborationUseCase.saveCardsetContent(Number(cardsetId));
-      this.logger.log(`Flushed cardset ${cardsetId} snapshot to database`);
+      await this.yjsDocumentService.flushIncrementalHistory(cardsetId);
+      this.logger.log(
+        `[cardset flush 완료] 증분값 DB 저장 완료 - cardsetId=${cardsetId}`,
+      );
+      await this.yjsDocumentService.deleteDocument(cardsetId);
+      this.logger.log(
+        `[Redis 문서 삭제] 방 비어있어 Redis 문서 삭제 완료 - cardsetId=${cardsetId}`,
+      );
     } catch (error) {
       this.logger.error(`Failed to flush cardset ${cardsetId}:`, error);
     }
