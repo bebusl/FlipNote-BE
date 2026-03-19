@@ -141,6 +141,22 @@ export class CollaborationUseCase {
     );
   }
 
+  async getCardsFromDB(
+    cardSetId: number,
+  ): Promise<{ id: string; question: string; answer: string }[]> {
+    const cardsetContent = await this.cardsetContentRepository.findOne({
+      where: { cardsetId: cardSetId },
+    });
+    if (!cardsetContent || !cardsetContent.content) return [];
+    const jsonContent = JSON.parse(cardsetContent.content) as Record<
+      string,
+      unknown
+    >;
+    const cards = jsonContent['cards'];
+    if (!Array.isArray(cards)) return [];
+    return cards as { id: string; question: string; answer: string }[];
+  }
+
   async loadCardsetContentFromDB(cardSetId: number): Promise<Y.Doc | null> {
     try {
       const cardsetContent = await this.cardsetContentRepository.findOne({

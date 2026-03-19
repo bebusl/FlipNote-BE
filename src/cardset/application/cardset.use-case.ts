@@ -604,7 +604,7 @@ export class CardsetUseCase {
   async findCardsFromYjs(
     cardSetId: number,
   ): Promise<{ id: string; question: string; answer: string }[]> {
-    const cards = await this.collaborationUseCase.getCards(cardSetId);
+    const cards = await this.collaborationUseCase.getCardsFromDB(cardSetId);
     this.logger.log(`[cardset:${cardSetId}] cards: ${JSON.stringify(cards)}`);
     return cards;
   }
