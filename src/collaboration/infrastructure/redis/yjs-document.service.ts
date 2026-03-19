@@ -58,8 +58,12 @@ export class YjsDocumentService implements OnModuleInit, OnModuleDestroy {
       if (!this.redisClient) return;
       const state = Y.encodeStateAsUpdate(doc);
       const key = `yjs:cardset:${cardsetId}`;
+      this.logger.log(
+        `Saving document to Redis, key: ${key}, state size: ${state.byteLength} bytes`,
+      );
       await this.redisClient.set(key, Buffer.from(state));
       await this.redisClient.expire(key, 86400 * 7);
+      this.logger.log(`Saved document to Redis successfully, key: ${key}`);
     } catch (error) {
       this.logger.error(
         `Failed to save document for cardset ${cardsetId}:`,

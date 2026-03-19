@@ -109,7 +109,11 @@ export class CollaborationUseCase {
       });
     }
     content.content = jsonContent;
+    this.logger.log(
+      `Saving cardset ${cardSetId} content to DB, content length: ${jsonContent.length}`,
+    );
     await this.cardsetContentRepository.save(content);
+    this.logger.log(`Saved cardset ${cardSetId} content to DB successfully`);
 
     await this.yjsDocumentService.flushIncrementalHistory(cardSetId.toString());
     this.logger.log(`Saved cardset ${cardSetId} content to DB`);
