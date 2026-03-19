@@ -34,6 +34,7 @@ export class CollaborationGateway
   private readonly logger = new Logger(CollaborationGateway.name);
   private flushTimeouts = new Map<string, NodeJS.Timeout>();
   private joiningClients = new Set<string>(); // join 처리 중인 clientId
+  private pendingUpdates = new Map<string, { cardsetId: string; update: number[] }[]>(); // join 완료 전 수신된 update 버퍼
 
   constructor(
     private readonly yjsDocumentService: YjsDocumentService,
@@ -84,6 +85,29 @@ export class CollaborationGateway
 
       this.joiningClients.delete(client.id);
       this.logger.log(`User ${user.userId} joined cardset ${cardsetId}`);
+
+      const buffered = this.pendingUpdates.get(client.id);
+      if (buffered && buffered.length > 0) {
+        this.logger.log(
+          `[버퍼 처리] join 완료 후 밀린 update 처리 - clientId=${client.id}, count=${buffered.length}`,
+        );
+        this.pendingUpdates.delete(client.id);
+        for (const pending of buffered) {
+          const updateBuffer = new Uint8Array(pending.update);
+          let pendingDoc = await this.yjsDocumentService.loadDocument(pending.cardsetId);
+          if (!pendingDoc) pendingDoc = new Y.Doc();
+          Y.applyUpdate(pendingDoc, updateBuffer);
+          await this.yjsDocumentService.saveUpdate(pending.cardsetId, updateBuffer);
+          const newState = Y.encodeStateAsUpdate(pendingDoc);
+          this.server.to(`cardset:${pending.cardsetId}`).emit('sync', {
+            cardsetId: pending.cardsetId,
+            update: newState,
+          });
+          this.logger.log(
+            `[버퍼 처리 완료] cardsetId=${pending.cardsetId}, clientId=${client.id}`,
+          );
+        }
+      }
     } catch (error) {
       this.logger.error('Error joining cardset:', error);
       this.logger.error('Error details:', {
@@ -94,6 +118,7 @@ export class CollaborationGateway
       });
 
       this.joiningClients.delete(client.id);
+      this.pendingUpdates.delete(client.id);
       try {
         const emptyDoc = new Y.Doc();
         const state = Y.encodeStateAsUpdate(emptyDoc);
@@ -163,9 +188,14 @@ export class CollaborationGateway
       );
 
       if (this.joiningClients.has(client.id)) {
-        this.logger.warn(
-          `[update 무시] join 처리 중 - clientId=${client.id}, cardsetId=${cardsetId}`,
-        );
+        if (update) {
+          const buffer = this.pendingUpdates.get(client.id) ?? [];
+          buffer.push({ cardsetId, update });
+          this.pendingUpdates.set(client.id, buffer);
+          this.logger.log(
+            `[update 버퍼링] join 완료 후 처리 예정 - clientId=${client.id}, cardsetId=${cardsetId}, 버퍼 크기=${buffer.length}`,
+          );
+        }
         return;
       }
 
