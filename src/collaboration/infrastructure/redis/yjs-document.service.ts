@@ -102,11 +102,17 @@ export class YjsDocumentService implements OnModuleInit, OnModuleDestroy {
         Y.applyUpdate(doc, existingData);
         Y.applyUpdate(doc, update);
         const newState = Y.encodeStateAsUpdate(doc);
+        this.logger.log(
+          `[saveUpdate] Redis 저장 전 doc 내용 - cardsetId=${cardsetId}, docJSON=${JSON.stringify(doc.toJSON())}`,
+        );
         await this.redisClient.set(key, Buffer.from(newState));
       } else {
         const doc = new Y.Doc();
         Y.applyUpdate(doc, update);
         const state = Y.encodeStateAsUpdate(doc);
+        this.logger.log(
+          `[saveUpdate] Redis 저장 전 doc 내용 (신규) - cardsetId=${cardsetId}, docJSON=${JSON.stringify(doc.toJSON())}`,
+        );
         await this.redisClient.set(key, Buffer.from(state));
       }
       await this.redisClient.expire(key, 86400 * 7);
