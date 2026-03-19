@@ -90,33 +90,54 @@ export class CollaborationUseCase {
   }
 
   async saveCardsetContent(cardSetId: number): Promise<void> {
+    this.logger.log(`[saveCardsetContent 시작] cardSetId=${cardSetId}`);
+
     const doc = await this.yjsDocumentService.loadDocument(
       cardSetId.toString(),
     );
     if (!doc) {
+      this.logger.warn(
+        `[saveCardsetContent] Redis에 doc 없음 - cardSetId=${cardSetId}`,
+      );
       throw new NotFoundException('Cardset snapshot not found in Redis');
     }
 
-    const jsonContent = JSON.stringify(doc.toJSON() ?? {});
+    const docJson = doc.toJSON() ?? {};
+    const cardCount = Array.isArray(docJson['cards'])
+      ? docJson['cards'].length
+      : 0;
+    const jsonContent = JSON.stringify(docJson);
+    this.logger.log(
+      `[saveCardsetContent] doc.toJSON() 완료 - cardSetId=${cardSetId}, cardCount=${cardCount}, contentLength=${jsonContent.length}`,
+    );
 
     let content = await this.cardsetContentRepository.findOne({
       where: { cardsetId: cardSetId },
     });
+    const isNew = !content;
     if (!content) {
       content = this.cardsetContentRepository.create({
         cardsetId: cardSetId,
         content: '',
       });
     }
+    this.logger.log(
+      `[saveCardsetContent] DB 레코드 ${isNew ? '신규 생성' : '기존 업데이트'} - cardSetId=${cardSetId}`,
+    );
+
     content.content = jsonContent;
     this.logger.log(
-      `Saving cardset ${cardSetId} content to DB, content length: ${jsonContent.length}`,
+      `[saveCardsetContent] DB 저장 시작 - cardSetId=${cardSetId}, contentLength=${jsonContent.length}`,
     );
     await this.cardsetContentRepository.save(content);
-    this.logger.log(`Saved cardset ${cardSetId} content to DB successfully`);
+    this.logger.log(
+      `[saveCardsetContent] DB 저장 완료 - cardSetId=${cardSetId}`,
+    );
 
     await this.yjsDocumentService.flushIncrementalHistory(cardSetId.toString());
-    this.logger.log(`Saved cardset ${cardSetId} content to DB`);
+    this.logger.log(
+      `[saveCardsetContent] incremental history flush 완료 - cardSetId=${cardSetId}`,
+    );
   }
 
   async loadCardsetContentFromDB(cardSetId: number): Promise<Y.Doc | null> {

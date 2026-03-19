@@ -590,8 +590,15 @@ export class CardsetUseCase {
   }
 
   async saveCards(cardSetId: number, userId: number): Promise<void> {
+    this.logger.log(
+      `[saveCards] 권한 확인 시작 - cardSetId=${cardSetId}, userId=${userId}`,
+    );
     await this.checkIsManager(cardSetId, userId);
+    this.logger.log(
+      `[saveCards] 권한 확인 완료 - cardSetId=${cardSetId}, userId=${userId}`,
+    );
     await this.collaborationUseCase.saveCardsetContent(cardSetId);
+    this.logger.log(`[saveCards] Yjs → DB 저장 완료 - cardSetId=${cardSetId}`);
   }
 
   async findCardsFromYjs(
