@@ -603,7 +603,17 @@ export class CardsetUseCase {
 
   async findCardsFromYjs(
     cardSetId: number,
+    userId: number,
   ): Promise<{ id: string; question: string; answer: string }[]> {
+    const cardset = await this.cardsetRepository.findById(cardSetId);
+    if (!cardset) throw new BusinessException(ErrorCode.CARDSET_NOT_FOUND);
+    if (cardset.visibility !== Visibility.PUBLIC) {
+      const inGroup =
+        !isNaN(userId) &&
+        (await this.groupGrpcClient.isUserInGroup(cardset.groupId, userId));
+      if (!inGroup)
+        throw new BusinessException(ErrorCode.CARDSET_ACCESS_DENIED);
+    }
     const cards = await this.collaborationUseCase.getCardsFromDB(cardSetId);
     this.logger.log(`[cardset:${cardSetId}] cards: ${JSON.stringify(cards)}`);
     return cards;

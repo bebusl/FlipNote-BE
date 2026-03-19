@@ -188,6 +188,7 @@ export class CardsetController {
   ): Promise<ApiResponse<YjsCardResponse[]>> {
     const cards = await this.cardsetUseCase.findCardsFromYjs(
       parseInt(cardsetId),
+      parseInt(_userId),
     );
     return ApiResponse.success(cards.map((c) => YjsCardResponse.from(c)));
   }
