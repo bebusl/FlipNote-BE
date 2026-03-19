@@ -33,6 +33,7 @@ export class CollaborationGateway
 
   private readonly logger = new Logger(CollaborationGateway.name);
   private flushTimeouts = new Map<string, NodeJS.Timeout>();
+  private joiningClients = new Set<string>(); // join 처리 중인 clientId
 
   constructor(
     private readonly yjsDocumentService: YjsDocumentService,
@@ -40,11 +41,11 @@ export class CollaborationGateway
   ) {}
 
   handleConnection(client: Socket) {
-    this.logger.log(`Client connected: ${client.id}`);
+    this.logger.log(`[클라이언트 연결] clientId=${client.id}`);
   }
 
   async handleDisconnect(client: Socket) {
-    this.logger.log(`Client disconnected: ${client.id}`);
+    this.logger.log(`[클라이언트 연결 해제] clientId=${client.id}`);
     await this.removeClientFromAllCardsets(client);
   }
 
@@ -55,9 +56,12 @@ export class CollaborationGateway
     @MessageBody() data: { cardsetId: string },
   ) {
     const { cardsetId } = data;
-    this.logger.log(`User ${user.userId} joining cardset ${cardsetId}`);
+    this.logger.log(
+      `[cardset 입장] userId=${user.userId}, cardsetId=${cardsetId}, clientId=${client.id}`,
+    );
 
     try {
+      this.joiningClients.add(client.id);
       void client.join(`cardset:${cardsetId}`);
 
       await this.yjsDocumentService.registerClient(cardsetId, client.id);
@@ -78,6 +82,7 @@ export class CollaborationGateway
       const state = Y.encodeStateAsUpdate(doc);
       client.emit('sync', { cardsetId, update: Array.from(state) });
 
+      this.joiningClients.delete(client.id);
       this.logger.log(`User ${user.userId} joined cardset ${cardsetId}`);
     } catch (error) {
       this.logger.error('Error joining cardset:', error);
@@ -88,6 +93,7 @@ export class CollaborationGateway
         errorStack: error instanceof Error ? error.stack : undefined,
       });
 
+      this.joiningClients.delete(client.id);
       try {
         const emptyDoc = new Y.Doc();
         const state = Y.encodeStateAsUpdate(emptyDoc);
@@ -113,7 +119,9 @@ export class CollaborationGateway
   ) {
     try {
       const { cardsetId } = data;
-      this.logger.log(`User ${user.userId} leaving cardset ${cardsetId}`);
+      this.logger.log(
+        `[cardset 퇴장] userId=${user.userId}, cardsetId=${cardsetId}, clientId=${client.id}`,
+      );
 
       void client.leave(`cardset:${cardsetId}`);
       await this.yjsDocumentService.unregisterClient(cardsetId, client.id);
@@ -134,6 +142,9 @@ export class CollaborationGateway
     payload: { cardsetId: string; awareness: number[] },
   ) {
     const { cardsetId, awareness } = payload;
+    this.logger.log(
+      `[awareness 브로드캐스트] cardsetId=${cardsetId}, clientId=${client.id}, awarenessSize=${awareness.length}`,
+    );
     client.to(`cardset:${cardsetId}`).emit('awareness', {
       data: { cardsetId, awareness: new Uint8Array(awareness) },
     });
@@ -148,8 +159,15 @@ export class CollaborationGateway
     try {
       const { cardsetId, update } = data;
       this.logger.log(
-        `Sync request from user ${user.userId} for cardset ${cardsetId}`,
+        `[update 수신] userId=${user.userId}, cardsetId=${cardsetId}, clientId=${client.id}, updateSize=${update?.length ?? 0}`,
       );
+
+      if (this.joiningClients.has(client.id)) {
+        this.logger.warn(
+          `[update 무시] join 처리 중 - clientId=${client.id}, cardsetId=${cardsetId}`,
+        );
+        return;
+      }
 
       if (!update) {
         client.emit('error', { message: 'Update data is required' });
@@ -185,6 +203,9 @@ export class CollaborationGateway
 
   private async loadDocumentFromDBOrCreate(cardsetId: string): Promise<Y.Doc> {
     const numericCardsetId = Number(cardsetId);
+    this.logger.log(
+      `[DB에서 문서 로드 시도] cardsetId=${cardsetId}, numericCardsetId=${numericCardsetId}`,
+    );
 
     try {
       const doc =
@@ -214,6 +235,7 @@ export class CollaborationGateway
   }
 
   private async createNewDocument(cardsetId: string): Promise<Y.Doc> {
+    this.logger.log(`[새 문서 생성] cardsetId=${cardsetId}`);
     const doc = new Y.Doc();
     this.logger.log(`Created new Yjs document for cardset ${cardsetId}`);
     await this.yjsDocumentService
@@ -228,6 +250,9 @@ export class CollaborationGateway
 
   private async removeClientFromAllCardsets(client: Socket) {
     const cardsets = await this.yjsDocumentService.getClientCardsets(client.id);
+    this.logger.log(
+      `[클라이언트 전체 cardset 제거] clientId=${client.id}, cardsets=${JSON.stringify(cardsets)}`,
+    );
     if (cardsets.length === 0) return;
 
     for (const cardsetId of cardsets) {
@@ -242,6 +267,9 @@ export class CollaborationGateway
   }
 
   private scheduleFlush(cardsetId: string) {
+    this.logger.log(
+      `[flush 예약] cardsetId=${cardsetId}, delayMs=${CollaborationGateway.FLUSH_DELAY_MS}`,
+    );
     if (this.flushTimeouts.has(cardsetId)) return;
     const timeout = setTimeout(() => {
       this.flushTimeouts.delete(cardsetId);
@@ -253,6 +281,9 @@ export class CollaborationGateway
 
   private clearScheduledFlush(cardsetId: string) {
     const timeout = this.flushTimeouts.get(cardsetId);
+    this.logger.log(
+      `[flush 예약 취소] cardsetId=${cardsetId}, hadScheduled=${!!timeout}`,
+    );
     if (timeout) {
       clearTimeout(timeout);
       this.flushTimeouts.delete(cardsetId);
@@ -262,6 +293,9 @@ export class CollaborationGateway
   private async flushCardset(cardsetId: string) {
     const activeCount =
       await this.yjsDocumentService.getActiveClientCount(cardsetId);
+    this.logger.log(
+      `[cardset flush 실행] cardsetId=${cardsetId}, activeCount=${activeCount}`,
+    );
     if (activeCount > 0) return;
 
     try {
