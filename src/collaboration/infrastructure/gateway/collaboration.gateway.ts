@@ -94,14 +94,10 @@ export class CollaborationGateway
         this.pendingUpdates.delete(client.id);
         for (const pending of buffered) {
           const updateBuffer = new Uint8Array(pending.update);
-          let pendingDoc = await this.yjsDocumentService.loadDocument(pending.cardsetId);
-          if (!pendingDoc) pendingDoc = new Y.Doc();
-          Y.applyUpdate(pendingDoc, updateBuffer);
-          await this.yjsDocumentService.saveUpdate(pending.cardsetId, updateBuffer);
-          const newState = Y.encodeStateAsUpdate(pendingDoc);
+          const finalState = await this.yjsDocumentService.saveUpdate(pending.cardsetId, updateBuffer);
           this.server.to(`cardset:${pending.cardsetId}`).emit('sync', {
             cardsetId: pending.cardsetId,
-            update: newState,
+            update: finalState,
           });
           this.logger.log(
             `[버퍼 처리 완료] cardsetId=${pending.cardsetId}, clientId=${client.id}`,
@@ -204,23 +200,12 @@ export class CollaborationGateway
         return;
       }
 
-      let doc = await this.yjsDocumentService.loadDocument(cardsetId);
-      if (!doc) {
-        doc = new Y.Doc();
-        this.logger.log(
-          `Created new Yjs document for cardset ${cardsetId} during update`,
-        );
-      }
-
       const updateBuffer = new Uint8Array(update);
-      Y.applyUpdate(doc, updateBuffer);
+      const finalState = await this.yjsDocumentService.saveUpdate(cardsetId, updateBuffer);
 
-      await this.yjsDocumentService.saveUpdate(cardsetId, updateBuffer);
-
-      const state = Y.encodeStateAsUpdate(doc);
       this.server.to(`cardset:${cardsetId}`).emit('sync', {
         cardsetId,
-        update: state,
+        update: finalState,
       });
       this.logger.log(
         `Sync update from user ${user.userId} broadcasted to all clients in cardset ${cardsetId}`,
