@@ -213,6 +213,14 @@ export class CollaborationGateway
           numericCardsetId,
         );
       if (doc) {
+        // DB 로드 완료 후 Redis에 저장하기 전에 다시 확인 — 그 사이 update가 Redis에 저장했을 수 있음
+        const existing = await this.yjsDocumentService.loadDocument(cardsetId);
+        if (existing) {
+          this.logger.log(
+            `[DB에서 문서 로드 시도] Redis에 이미 doc 존재, 덮어쓰기 생략 - cardsetId=${cardsetId}`,
+          );
+          return existing;
+        }
         await this.yjsDocumentService
           .saveDocument(cardsetId, doc)
           .catch((error) => {
@@ -236,6 +244,14 @@ export class CollaborationGateway
 
   private async createNewDocument(cardsetId: string): Promise<Y.Doc> {
     this.logger.log(`[새 문서 생성] cardsetId=${cardsetId}`);
+    // 저장 전 Redis 재확인 — 그 사이 update가 저장했을 수 있음
+    const existing = await this.yjsDocumentService.loadDocument(cardsetId);
+    if (existing) {
+      this.logger.log(
+        `[새 문서 생성] Redis에 이미 doc 존재, 빈 doc 저장 생략 - cardsetId=${cardsetId}`,
+      );
+      return existing;
+    }
     const doc = new Y.Doc();
     this.logger.log(`Created new Yjs document for cardset ${cardsetId}`);
     await this.yjsDocumentService

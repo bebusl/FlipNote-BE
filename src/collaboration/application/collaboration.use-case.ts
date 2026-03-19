@@ -103,12 +103,14 @@ export class CollaborationUseCase {
     }
 
     const docJson = doc.toJSON() ?? {};
-    const cardCount = Array.isArray(docJson['cards'])
-      ? docJson['cards'].length
-      : 0;
+    const cards = Array.isArray(docJson['cards']) ? docJson['cards'] : [];
+    const cardCount = cards.length;
     const jsonContent = JSON.stringify(docJson);
     this.logger.log(
       `[saveCardsetContent] doc.toJSON() 완료 - cardSetId=${cardSetId}, cardCount=${cardCount}, contentLength=${jsonContent.length}`,
+    );
+    this.logger.log(
+      `[saveCardsetContent] 저장 내용 - ${JSON.stringify(cards)}`,
     );
 
     let content = await this.cardsetContentRepository.findOne({
