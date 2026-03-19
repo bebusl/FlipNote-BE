@@ -102,12 +102,11 @@ export class CollaborationUseCase {
       throw new NotFoundException('Cardset snapshot not found in Redis');
     }
 
-    const docJson = doc.toJSON() ?? {};
-    const cards = Array.isArray(docJson['cards']) ? docJson['cards'] : [];
+    const cards = doc.getArray('cards').toJSON() as unknown[];
     const cardCount = cards.length;
-    const jsonContent = JSON.stringify(docJson);
+    const jsonContent = JSON.stringify({ cards });
     this.logger.log(
-      `[saveCardsetContent] doc.toJSON() 완료 - cardSetId=${cardSetId}, cardCount=${cardCount}, contentLength=${jsonContent.length}`,
+      `[saveCardsetContent] 카드 읽기 완료 - cardSetId=${cardSetId}, cardCount=${cardCount}, contentLength=${jsonContent.length}`,
     );
     this.logger.log(
       `[saveCardsetContent] 저장 내용 - ${JSON.stringify(cards)}`,

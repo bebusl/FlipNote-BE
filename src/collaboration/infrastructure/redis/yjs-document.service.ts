@@ -103,7 +103,7 @@ export class YjsDocumentService implements OnModuleInit, OnModuleDestroy {
         Y.applyUpdate(doc, update);
         const newState = Y.encodeStateAsUpdate(doc);
         this.logger.log(
-          `[saveUpdate] Redis 저장 전 doc 내용 - cardsetId=${cardsetId}, docJSON=${JSON.stringify(doc.toJSON())}`,
+          `[saveUpdate] Redis 저장 전 doc 내용 - cardsetId=${cardsetId}, cards=${JSON.stringify(doc.getArray('cards').toJSON())}`,
         );
         await this.redisClient.set(key, Buffer.from(newState));
       } else {
@@ -111,7 +111,7 @@ export class YjsDocumentService implements OnModuleInit, OnModuleDestroy {
         Y.applyUpdate(doc, update);
         const state = Y.encodeStateAsUpdate(doc);
         this.logger.log(
-          `[saveUpdate] Redis 저장 전 doc 내용 (신규) - cardsetId=${cardsetId}, docJSON=${JSON.stringify(doc.toJSON())}`,
+          `[saveUpdate] Redis 저장 전 doc 내용 (신규) - cardsetId=${cardsetId}, cards=${JSON.stringify(doc.getArray('cards').toJSON())}`,
         );
         await this.redisClient.set(key, Buffer.from(state));
       }
