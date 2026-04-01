@@ -4,33 +4,23 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
-import { AuthService } from '../../domain/auth.service';
 import { Socket } from 'socket.io';
+import { UserGrpcClient } from '../../../cardset/infrastructure/grpc/user-grpc.client';
 
 @Injectable()
 export class WsAuthGuard implements CanActivate {
   private readonly logger = new Logger(WsAuthGuard.name);
 
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly userGrpcClient: UserGrpcClient) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const client: Socket = context.switchToWs().getClient<Socket>();
 
-    const SKIP_AUTH = process.env.SKIP_WS_AUTH === 'true' || true;
-    if (SKIP_AUTH) {
-      (client.data as { user: unknown }).user = {
-        userId: 'test-user',
-        email: 'test@example.com',
-      };
-      this.logger.warn(
-        `⚠️  테스트 모드: 인증을 건너뛰고 있습니다 (client ${client.id})`,
-      );
-      return true;
-    }
-
+    const rawAuth: unknown = client.handshake.auth?.token;
+    const rawHeader = client.handshake.headers?.authorization;
     const bearer =
-      (client.handshake.auth?.token as string | undefined) ??
-      client.handshake.headers?.authorization;
+      (typeof rawAuth === 'string' ? rawAuth : undefined) ??
+      (typeof rawHeader === 'string' ? rawHeader : undefined);
 
     const token =
       bearer && bearer.startsWith('Bearer ') ? bearer.slice(7) : bearer;
@@ -41,12 +31,17 @@ export class WsAuthGuard implements CanActivate {
     }
 
     try {
-      const user = this.authService.verify(token);
-      (client.data as { user: unknown }).user = user;
+      const { userId, nickname } = await this.userGrpcClient.getUserByToken(token);
+      (client.data as { user: unknown }).user = {
+        userId: String(userId),
+        nickname,
+      };
       return true;
-    } catch (error) {
+    } catch (err: unknown) {
       this.logger.warn(
-        `Invalid token for client ${client.id}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Token verification failed for client ${client.id}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
       );
       return false;
     }

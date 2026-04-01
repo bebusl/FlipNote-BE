@@ -77,8 +77,15 @@ export class CollaborationGateway
 
       const state = Y.encodeStateAsUpdate(doc);
       client.emit('sync', { cardsetId, update: Array.from(state) });
+      client.emit('joined', {
+        cardsetId,
+        userId: user.userId,
+        nickname: user.nickname,
+      });
 
-      this.logger.log(`User ${user.userId} joined cardset ${cardsetId}`);
+      this.logger.log(
+        `User ${user.userId} (${user.nickname}) joined cardset ${cardsetId}`,
+      );
     } catch (error) {
       this.logger.error('Error joining cardset:', error);
       this.logger.error('Error details:', {
