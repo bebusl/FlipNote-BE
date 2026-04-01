@@ -8,6 +8,7 @@ import {
   Param,
   Query,
   Headers,
+  Logger,
 } from '@nestjs/common';
 
 import {
@@ -34,6 +35,8 @@ import { PagedResponse } from '../../../shared/common/paged-response';
 @ApiTags('card-sets')
 @Controller('card-sets')
 export class CardsetController {
+  private readonly logger = new Logger(CardsetController.name);
+
   constructor(private readonly cardsetUseCase: CardsetUseCase) {}
 
   @Post()
@@ -185,6 +188,7 @@ export class CardsetController {
   ): Promise<ApiResponse<YjsCardResponse[]>> {
     const cards = await this.cardsetUseCase.findCardsFromYjs(
       parseInt(cardsetId),
+      parseInt(_userId),
     );
     return ApiResponse.success(cards.map((c) => YjsCardResponse.from(c)));
   }
@@ -198,7 +202,13 @@ export class CardsetController {
     @Headers('X-USER-ID') userId: string,
     @Param('cardsetId') cardsetId: string,
   ): Promise<ApiResponse<null>> {
+    this.logger.log(
+      `[카드 저장 요청] cardsetId=${cardsetId}, userId=${userId}`,
+    );
     await this.cardsetUseCase.saveCards(parseInt(cardsetId), parseInt(userId));
+    this.logger.log(
+      `[카드 저장 완료] cardsetId=${cardsetId}, userId=${userId}`,
+    );
     return ApiResponse.success(null);
   }
 

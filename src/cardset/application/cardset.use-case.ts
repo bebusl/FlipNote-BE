@@ -590,14 +590,31 @@ export class CardsetUseCase {
   }
 
   async saveCards(cardSetId: number, userId: number): Promise<void> {
+    this.logger.log(
+      `[saveCards] 권한 확인 시작 - cardSetId=${cardSetId}, userId=${userId}`,
+    );
     await this.checkIsManager(cardSetId, userId);
+    this.logger.log(
+      `[saveCards] 권한 확인 완료 - cardSetId=${cardSetId}, userId=${userId}`,
+    );
     await this.collaborationUseCase.saveCardsetContent(cardSetId);
+    this.logger.log(`[saveCards] Yjs → DB 저장 완료 - cardSetId=${cardSetId}`);
   }
 
   async findCardsFromYjs(
     cardSetId: number,
+    userId: number,
   ): Promise<{ id: string; question: string; answer: string }[]> {
-    const cards = await this.collaborationUseCase.getCards(cardSetId);
+    const cardset = await this.cardsetRepository.findById(cardSetId);
+    if (!cardset) throw new BusinessException(ErrorCode.CARDSET_NOT_FOUND);
+    if (cardset.visibility !== Visibility.PUBLIC) {
+      const inGroup =
+        !isNaN(userId) &&
+        (await this.groupGrpcClient.isUserInGroup(cardset.groupId, userId));
+      if (!inGroup)
+        throw new BusinessException(ErrorCode.CARDSET_ACCESS_DENIED);
+    }
+    const cards = await this.collaborationUseCase.getCardsFromDB(cardSetId);
     this.logger.log(`[cardset:${cardSetId}] cards: ${JSON.stringify(cards)}`);
     return cards;
   }

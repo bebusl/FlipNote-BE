@@ -58,8 +58,12 @@ export class YjsDocumentService implements OnModuleInit, OnModuleDestroy {
       if (!this.redisClient) return;
       const state = Y.encodeStateAsUpdate(doc);
       const key = `yjs:cardset:${cardsetId}`;
+      this.logger.log(
+        `Saving document to Redis, key: ${key}, state size: ${state.byteLength} bytes`,
+      );
       await this.redisClient.set(key, Buffer.from(state));
       await this.redisClient.expire(key, 86400 * 7);
+      this.logger.log(`Saved document to Redis successfully, key: ${key}`);
     } catch (error) {
       this.logger.error(
         `Failed to save document for cardset ${cardsetId}:`,
@@ -85,30 +89,28 @@ export class YjsDocumentService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async saveUpdate(cardsetId: string, update: Uint8Array): Promise<void> {
+  async saveUpdate(cardsetId: string, update: Uint8Array): Promise<Uint8Array> {
     try {
-      if (!this.redisClient) return;
+      if (!this.redisClient) return update;
       const key = `yjs:cardset:${cardsetId}`;
       const historyKey = `yjs:cardset:${cardsetId}:updates`;
-      const updateBuffer = Buffer.from(update);
 
+      const doc = new Y.Doc();
       const existingData = await this.redisClient.getBuffer(key);
       if (existingData) {
-        const doc = new Y.Doc();
         Y.applyUpdate(doc, existingData);
-        Y.applyUpdate(doc, update);
-        const newState = Y.encodeStateAsUpdate(doc);
-        await this.redisClient.set(key, Buffer.from(newState));
-      } else {
-        const doc = new Y.Doc();
-        Y.applyUpdate(doc, update);
-        const state = Y.encodeStateAsUpdate(doc);
-        await this.redisClient.set(key, Buffer.from(state));
       }
+      Y.applyUpdate(doc, update);
+      const newState = Y.encodeStateAsUpdate(doc);
+      this.logger.log(
+        `[saveUpdate] Redis 저장 전 doc 내용 - cardsetId=${cardsetId}, cards=${JSON.stringify(doc.getArray('cards').toJSON())}`,
+      );
+      await this.redisClient.set(key, Buffer.from(newState));
       await this.redisClient.expire(key, 86400 * 7);
-      await this.redisClient.rpush(historyKey, updateBuffer.toString('base64'));
+      await this.redisClient.rpush(historyKey, Buffer.from(update).toString('base64'));
 
       this.scheduleMySqlPersistence(cardsetId);
+      return newState;
     } catch (error) {
       this.logger.error(
         `Failed to save update for cardset ${cardsetId}:`,
