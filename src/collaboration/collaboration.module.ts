@@ -7,6 +7,8 @@ import { YjsDocumentService } from './infrastructure/redis/yjs-document.service'
 import { CollaborationUseCase } from './application/collaboration.use-case';
 import { CollaborationGateway } from './infrastructure/gateway/collaboration.gateway';
 import { AuthModule } from '../auth/auth.module';
+import { UserGrpcClient } from '../cardset/infrastructure/grpc/user-grpc.client';
+import { GrpcClientModule } from '../shared/grpc/grpc-client.module';
 
 @Module({
   imports: [
@@ -15,8 +17,9 @@ import { AuthModule } from '../auth/auth.module';
       CardsetIncrementalOrmEntity,
     ]),
     AuthModule,
+    GrpcClientModule,
   ],
-  providers: [YjsDocumentService, CollaborationUseCase, CollaborationGateway],
+  providers: [YjsDocumentService, CollaborationUseCase, CollaborationGateway, UserGrpcClient],
   exports: [CollaborationUseCase],
 })
 export class CollaborationModule {}
