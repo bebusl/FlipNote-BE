@@ -24,12 +24,11 @@ export class AuthService {
       ) &
         JwtUser;
 
-      const { user_id, role, token_version } = payload;
+      const { user_id } = payload;
 
       return {
         userId: user_id,
-        role,
-        tokenVersion: token_version,
+        nickname: '',
       };
     } catch (e) {
       throw new UnauthorizedException(e);

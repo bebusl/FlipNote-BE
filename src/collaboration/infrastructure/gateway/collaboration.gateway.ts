@@ -61,6 +61,18 @@ export class CollaborationGateway
     );
 
     try {
+      const isManager = await this.collaborationUseCase.isManager(
+        Number(cardsetId),
+        Number(user.userId),
+      );
+      if (!isManager) {
+        this.logger.warn(
+          `[cardset 입장 거부] 매니저 아님 - userId=${user.userId}, cardsetId=${cardsetId}`,
+        );
+        client.emit('error', { message: '카드셋 편집 권한이 없습니다.' });
+        return;
+      }
+
       this.joiningClients.add(client.id);
       void client.join(`cardset:${cardsetId}`);
 
@@ -81,9 +93,14 @@ export class CollaborationGateway
 
       const state = Y.encodeStateAsUpdate(doc);
       client.emit('sync', { cardsetId, update: Array.from(state) });
+      // client.emit('joined', {
+      //   cardsetId,
+      //   userId: user.userId,
+      //   nickname: user.nickname
+      // });
 
       this.joiningClients.delete(client.id);
-      this.logger.log(`User ${user.userId} joined cardset ${cardsetId}`);
+      this.logger.log(`User ${user.userId} (${user.nickname}) joined cardset ${cardsetId}`);
 
       const buffered = this.pendingUpdates.get(client.id);
       if (buffered && buffered.length > 0) {
