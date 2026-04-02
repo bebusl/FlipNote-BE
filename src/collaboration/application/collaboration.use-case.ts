@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import * as Y from 'yjs';
 import { YjsDocumentService } from '../infrastructure/redis/yjs-document.service';
 import { CardsetContentOrmEntity } from '../infrastructure/persistence/orm/cardset-content.orm-entity';
+import { CardsetManagerOrmEntity } from '../../cardset/infrastructure/persistence/orm/cardset-manager.orm-entity';
 
 @Injectable()
 export class CollaborationUseCase {
@@ -13,7 +14,16 @@ export class CollaborationUseCase {
     private readonly yjsDocumentService: YjsDocumentService,
     @InjectRepository(CardsetContentOrmEntity)
     private readonly cardsetContentRepository: Repository<CardsetContentOrmEntity>,
+    @InjectRepository(CardsetManagerOrmEntity)
+    private readonly cardsetManagerRepository: Repository<CardsetManagerOrmEntity>,
   ) {}
+
+  async isManager(cardSetId: number, userId: number): Promise<boolean> {
+    const manager = await this.cardsetManagerRepository.findOne({
+      where: { cardSetId, userId },
+    });
+    return !!manager;
+  }
 
   async getOrCreateDocument(cardsetId: number): Promise<Y.Doc> {
     const fromRedis = await this.yjsDocumentService.loadDocument(
