@@ -161,23 +161,21 @@ export class CardsetUseCase {
       category: req.category,
     });
 
-    const visibleCardsets: Cardset[] = [];
-    for (const cardset of items) {
-      if (cardset.visibility === Visibility.PUBLIC) {
-        visibleCardsets.push(cardset);
-        continue;
-      }
-      if (isNaN(userId)) continue;
+    const hasPrivate = items.some((c) => c.visibility !== Visibility.PUBLIC);
+    let myGroupIds = new Set<number>();
+    if (hasPrivate && !isNaN(userId)) {
       try {
-        const inGroup = await this.groupGrpcClient.isUserInGroup(
-          cardset.groupId,
-          userId,
+        myGroupIds = await this.groupGrpcClient.getMyGroupIds(userId);
+      } catch (err) {
+        this.logger.error(
+          `[findAllPaged] 그룹 목록 조회 실패 (userId=${userId}): ${err instanceof Error ? err.message : String(err)}`,
         );
-        if (inGroup) visibleCardsets.push(cardset);
-      } catch {
-        // 그룹 조회 실패 시 해당 카드셋 제외
       }
     }
+
+    const visibleCardsets = items.filter(
+      (c) => c.visibility === Visibility.PUBLIC || myGroupIds.has(c.groupId),
+    );
 
     const ids = visibleCardsets.map((c) => c.id);
 
@@ -237,23 +235,20 @@ export class CardsetUseCase {
     }[]
   > {
     const cardsets = await this.cardsetRepository.findAll();
-    const visibleCardsets: Cardset[] = [];
-    for (const cardset of cardsets) {
-      if (cardset.visibility === Visibility.PUBLIC) {
-        visibleCardsets.push(cardset);
-        continue;
-      }
-      if (isNaN(userId)) continue;
+    const hasPrivate = cardsets.some((c) => c.visibility !== Visibility.PUBLIC);
+    let myGroupIds = new Set<number>();
+    if (hasPrivate && !isNaN(userId)) {
       try {
-        const inGroup = await this.groupGrpcClient.isUserInGroup(
-          cardset.groupId,
-          userId,
+        myGroupIds = await this.groupGrpcClient.getMyGroupIds(userId);
+      } catch (err) {
+        this.logger.error(
+          `[findAll] 그룹 목록 조회 실패 (userId=${userId}): ${err instanceof Error ? err.message : String(err)}`,
         );
-        if (inGroup) visibleCardsets.push(cardset);
-      } catch {
-        // 그룹 조회 실패 시 해당 카드셋 제외
       }
     }
+    const visibleCardsets = cardsets.filter(
+      (c) => c.visibility === Visibility.PUBLIC || myGroupIds.has(c.groupId),
+    );
 
     const ids = visibleCardsets.map((c) => c.id);
     const [metadataMap, likedMap, bookmarkedMap, managersMap] =
@@ -536,19 +531,20 @@ export class CardsetUseCase {
     userId: number,
   ): Promise<Cardset[]> {
     const cardsets = await this.cardsetRepository.findByIds(cardSetIds);
-    const viewable: Cardset[] = [];
-    for (const cardset of cardsets) {
-      if (cardset.visibility === Visibility.PUBLIC) {
-        viewable.push(cardset);
-      } else {
-        const inGroup = await this.groupGrpcClient.isUserInGroup(
-          cardset.groupId,
-          userId,
+    const hasPrivate = cardsets.some((c) => c.visibility !== Visibility.PUBLIC);
+    let myGroupIds = new Set<number>();
+    if (hasPrivate && !isNaN(userId)) {
+      try {
+        myGroupIds = await this.groupGrpcClient.getMyGroupIds(userId);
+      } catch (err) {
+        this.logger.error(
+          `[getCardSetsByIds] 그룹 목록 조회 실패 (userId=${userId}): ${err instanceof Error ? err.message : String(err)}`,
         );
-        if (inGroup) viewable.push(cardset);
       }
     }
-    return viewable;
+    return cardsets.filter(
+      (c) => c.visibility === Visibility.PUBLIC || myGroupIds.has(c.groupId),
+    );
   }
 
   async updateCardCount(

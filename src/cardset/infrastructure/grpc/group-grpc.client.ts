@@ -9,6 +9,7 @@ interface GroupCommandService {
     groupId: number;
     userId: number;
   }): Observable<{ exists: boolean }>;
+  getMyGroup(data: { userId: number }): Observable<{ groupId: number[] }>;
 }
 
 @Injectable()
@@ -39,5 +40,14 @@ export class GroupGrpcClient implements OnModuleInit {
       this.groupService.checkUserInGroup({ groupId, userId }),
     );
     return result.exists;
+  }
+
+  async getMyGroupIds(userId: number): Promise<Set<number>> {
+    console.log('[getMyGroupIds] request userId:', userId);
+    const result = await firstValueFrom(
+      this.groupService.getMyGroup({ userId }),
+    );
+    console.log('[getMyGroupIds] raw result:', JSON.stringify(result));
+    return new Set((result.groupId ?? []).map(Number));
   }
 }
