@@ -205,9 +205,10 @@ export class CardsetUseCase {
       managers: UserInfo[];
     }[] = [];
     for (const cardset of visibleCardsets) {
-      const imageUrl = cardset.imageRefId
-        ? await this.imageGrpcClient.getImageUrl(cardset.id)
-        : this.defaultImageUrl;
+      const imageUrl =
+        (cardset.imageRefId
+          ? await this.imageGrpcClient.getImageUrl(cardset.id)
+          : null) ?? this.defaultImageUrl;
       const meta = metadataMap.get(cardset.id);
       result.push({
         cardset,
@@ -273,9 +274,10 @@ export class CardsetUseCase {
       managers: UserInfo[];
     }[] = [];
     for (const cardset of visibleCardsets) {
-      const imageUrl = cardset.imageRefId
-        ? await this.imageGrpcClient.getImageUrl(cardset.id)
-        : this.defaultImageUrl;
+      const imageUrl =
+        (cardset.imageRefId
+          ? await this.imageGrpcClient.getImageUrl(cardset.id)
+          : null) ?? this.defaultImageUrl;
       const meta = metadataMap.get(cardset.id);
       result.push({
         cardset,
@@ -351,9 +353,10 @@ export class CardsetUseCase {
       managers: UserInfo[];
     }[] = [];
     for (const cardset of items) {
-      const imageUrl = cardset.imageRefId
-        ? await this.imageGrpcClient.getImageUrl(cardset.id)
-        : this.defaultImageUrl;
+      const imageUrl =
+        (cardset.imageRefId
+          ? await this.imageGrpcClient.getImageUrl(cardset.id)
+          : null) ?? this.defaultImageUrl;
       const meta = metadataMap.get(cardset.id);
       result.push({
         cardset,
@@ -392,7 +395,9 @@ export class CardsetUseCase {
     }
     const [imageUrl, meta, liked, bookmarked, managersMap] = await Promise.all([
       cardset.imageRefId
-        ? this.imageGrpcClient.getImageUrl(cardset.id)
+        ? this.imageGrpcClient
+            .getImageUrl(cardset.id)
+            .then((url) => url ?? this.defaultImageUrl)
         : Promise.resolve(this.defaultImageUrl),
       this.metadataRepository.findByCardSetId(id),
       this.skipReactionGrpc
@@ -455,9 +460,10 @@ export class CardsetUseCase {
       managers: UserInfo[];
     }[] = [];
     for (const cardset of cardsets) {
-      const imageUrl = cardset.imageRefId
-        ? await this.imageGrpcClient.getImageUrl(cardset.id)
-        : this.defaultImageUrl;
+      const imageUrl =
+        (cardset.imageRefId
+          ? await this.imageGrpcClient.getImageUrl(cardset.id)
+          : null) ?? this.defaultImageUrl;
       const meta = metadataMap.get(cardset.id);
       result.push({
         cardset,

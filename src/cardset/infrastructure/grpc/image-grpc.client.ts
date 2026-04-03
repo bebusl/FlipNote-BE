@@ -41,7 +41,7 @@ export class ImageGrpcClient implements OnModuleInit {
     );
   }
 
-  async getImageUrl(cardSetId: number): Promise<string> {
+  async getImageUrl(cardSetId: number): Promise<string | null> {
     try {
       const result = await firstValueFrom(
         this.imageService.getUrlByReference({
@@ -51,7 +51,7 @@ export class ImageGrpcClient implements OnModuleInit {
       );
       return result.imageUrl;
     } catch {
-      throw new BusinessException(ErrorCode.IMAGE_SERVICE_ERROR);
+      return null;
     }
   }
 
