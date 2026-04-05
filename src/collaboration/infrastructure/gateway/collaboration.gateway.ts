@@ -7,7 +7,7 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
-import { Logger, UseGuards } from '@nestjs/common';
+import { Logger, UseFilters, UseGuards } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import * as Y from 'yjs';
 import { WsAuthGuard } from '../../../auth/infrastructure/guard/ws-auth.guard';
@@ -15,7 +15,9 @@ import { WsUser } from '../../../shared/decorator/ws-user.decorator';
 import type { UserAuth } from '../../../shared/types/user-auth.type';
 import { YjsDocumentService } from '../redis/yjs-document.service';
 import { CollaborationUseCase } from '../../application/collaboration.use-case';
+import { WsExceptionFilter } from '../../../shared/common/ws-exception.filter';
 
+@UseFilters(WsExceptionFilter)
 @UseGuards(WsAuthGuard)
 @WebSocketGateway({
   cors: false,

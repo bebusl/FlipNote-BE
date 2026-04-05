@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
+import { WsException } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
 import { UserGrpcClient } from '../../../cardset/infrastructure/grpc/user-grpc.client';
 
@@ -43,7 +44,7 @@ export class WsAuthGuard implements CanActivate {
 
     if (!token) {
       this.logger.warn(`No token provided for client ${client.id}`);
-      return false;
+      throw new WsException('인증 토큰이 없습니다.');
     }
 
     try {
@@ -59,7 +60,7 @@ export class WsAuthGuard implements CanActivate {
           err instanceof Error ? err.message : String(err)
         }`,
       );
-      return false;
+      throw new WsException('유효하지 않은 토큰입니다.');
     }
   }
 }
