@@ -23,7 +23,7 @@ export class UserGrpcClient implements OnModuleInit {
 
   constructor(
     @Inject('USER_GRPC_CLIENT') private readonly client: ClientGrpc,
-  ) {}
+  ) { }
 
   onModuleInit() {
     this.userService =
@@ -40,10 +40,7 @@ export class UserGrpcClient implements OnModuleInit {
     accessToken: string,
   ): Promise<{ userId: number; nickname: string }> {
     console.log('[getUserByToken] accessToken length:', accessToken?.length);
-    console.log(
-      '[getUserByToken] accessToken preview:',
-      accessToken?.slice(0, 20),
-    );
+    console.log('[getUserByToken] accessToken:', accessToken);
     const result = await firstValueFrom(
       this.userService.getUserByToken({ access_token: accessToken }),
     );
