@@ -37,6 +37,10 @@ export class WsAuthGuard implements CanActivate {
       fromCookie ??
       (bearer && bearer.startsWith('Bearer ') ? bearer.slice(7) : bearer);
 
+    this.logger.log(`[WsAuthGuard] cookie: ${String(rawCookie)}`);
+    this.logger.log(`[WsAuthGuard] fromCookie: ${String(fromCookie)}`);
+    this.logger.log(`[WsAuthGuard] token: ${String(token)}`);
+
     if (!token) {
       this.logger.warn(`No token provided for client ${client.id}`);
       return false;
