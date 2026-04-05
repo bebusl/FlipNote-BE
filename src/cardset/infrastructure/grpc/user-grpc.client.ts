@@ -11,8 +11,8 @@ export interface UserInfo {
 
 interface UserQueryService {
   getUsers(data: { userIds: number[] }): Observable<{ users: UserInfo[] }>;
-  getUserByToken(data: { access_token: string }): Observable<{
-    user_id: number;
+  getUserByToken(data: { accessToken: string }): Observable<{
+    userId: number;
     nickname: string;
   }>;
 }
@@ -42,8 +42,8 @@ export class UserGrpcClient implements OnModuleInit {
     console.log('[getUserByToken] accessToken length:', accessToken?.length);
     console.log('[getUserByToken] accessToken:', accessToken);
     const result = await firstValueFrom(
-      this.userService.getUserByToken({ access_token: accessToken }),
+      this.userService.getUserByToken({ accessToken }),
     );
-    return { userId: result.user_id, nickname: result.nickname };
+    return { userId: result.userId, nickname: result.nickname };
   }
 }
