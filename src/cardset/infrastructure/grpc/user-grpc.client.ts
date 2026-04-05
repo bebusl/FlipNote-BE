@@ -39,6 +39,11 @@ export class UserGrpcClient implements OnModuleInit {
   async getUserByToken(
     accessToken: string,
   ): Promise<{ userId: number; nickname: string }> {
+    console.log('[getUserByToken] accessToken length:', accessToken?.length);
+    console.log(
+      '[getUserByToken] accessToken preview:',
+      accessToken?.slice(0, 20),
+    );
     const result = await firstValueFrom(
       this.userService.getUserByToken({ access_token: accessToken }),
     );
