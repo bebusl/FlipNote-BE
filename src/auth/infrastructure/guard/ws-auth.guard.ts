@@ -34,9 +34,9 @@ export class WsAuthGuard implements CanActivate {
       (typeof rawAuth === 'string' ? rawAuth : undefined) ??
       (typeof rawHeader === 'string' ? rawHeader : undefined);
 
-    const token =
-      fromCookie ??
-      (bearer && bearer.startsWith('Bearer ') ? bearer.slice(7) : bearer);
+    const rawToken =
+      bearer && bearer.startsWith('Bearer ') ? bearer.slice(7) : bearer;
+    const token = fromCookie?.trim() || rawToken?.trim() || undefined;
 
     this.logger.log(`[WsAuthGuard] cookie: ${String(rawCookie)}`);
     this.logger.log(`[WsAuthGuard] fromCookie: ${String(fromCookie)}`);
