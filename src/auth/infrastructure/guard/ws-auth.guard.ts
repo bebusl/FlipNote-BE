@@ -18,12 +18,24 @@ export class WsAuthGuard implements CanActivate {
 
     const rawAuth: unknown = client.handshake.auth?.token;
     const rawHeader = client.handshake.headers?.authorization;
+    const rawCookie = client.handshake.headers?.cookie;
+
+    const fromCookie =
+      typeof rawCookie === 'string'
+        ? rawCookie
+            .split(';')
+            .map((c) => c.trim())
+            .find((c) => c.startsWith('accessToken='))
+            ?.slice('accessToken='.length)
+        : undefined;
+
     const bearer =
       (typeof rawAuth === 'string' ? rawAuth : undefined) ??
       (typeof rawHeader === 'string' ? rawHeader : undefined);
 
     const token =
-      bearer && bearer.startsWith('Bearer ') ? bearer.slice(7) : bearer;
+      fromCookie ??
+      (bearer && bearer.startsWith('Bearer ') ? bearer.slice(7) : bearer);
 
     if (!token) {
       this.logger.warn(`No token provided for client ${client.id}`);
