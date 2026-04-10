@@ -33,6 +33,7 @@ export class ReactionConsumer {
       'reaction.bookmark.removed',
     ],
     queue: 'cardset.reaction.queue',
+    queueOptions: { durable: true },
   })
   async handleReaction(msg: ReactionMessage): Promise<void> {
     if (msg.targetType !== 'CARD_SET') return;
@@ -42,19 +43,26 @@ export class ReactionConsumer {
       `Reaction event: ${msg.eventType} for cardSetId=${cardSetId}`,
     );
 
-    switch (msg.eventType) {
-      case 'LIKE_ADDED':
-        await this.metadataRepository.upsertAndIncrementLike(cardSetId);
-        break;
-      case 'LIKE_REMOVED':
-        await this.metadataRepository.upsertAndDecrementLike(cardSetId);
-        break;
-      case 'BOOKMARK_ADDED':
-        await this.metadataRepository.upsertAndIncrementBookmark(cardSetId);
-        break;
-      case 'BOOKMARK_REMOVED':
-        await this.metadataRepository.upsertAndDecrementBookmark(cardSetId);
-        break;
+    try {
+      switch (msg.eventType) {
+        case 'LIKE_ADDED':
+          await this.metadataRepository.upsertAndIncrementLike(cardSetId);
+          break;
+        case 'LIKE_REMOVED':
+          await this.metadataRepository.upsertAndDecrementLike(cardSetId);
+          break;
+        case 'BOOKMARK_ADDED':
+          await this.metadataRepository.upsertAndIncrementBookmark(cardSetId);
+          break;
+        case 'BOOKMARK_REMOVED':
+          await this.metadataRepository.upsertAndDecrementBookmark(cardSetId);
+          break;
+      }
+    } catch (err) {
+      this.logger.error(
+        `Reaction 처리 실패 - eventType=${msg.eventType}, cardSetId=${cardSetId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      throw err; // nack → DLQ로 이동
     }
   }
 }
