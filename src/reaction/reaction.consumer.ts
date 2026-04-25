@@ -33,7 +33,13 @@ export class ReactionConsumer {
       'reaction.bookmark.removed',
     ],
     queue: 'cardset.reaction.queue',
-    queueOptions: { durable: true },
+    queueOptions: {
+      durable: true,
+      arguments: {
+        'x-dead-letter-exchange': 'reaction.dlx',
+        'x-dead-letter-routing-key': 'cardset.reaction.dead',
+      },
+    },
   })
   async handleReaction(msg: ReactionMessage): Promise<void> {
     if (msg.targetType !== 'CARD_SET') return;
