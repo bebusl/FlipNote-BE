@@ -1,0 +1,23 @@
+# 로컬 환경 변수 (실제 시크릿 포함 — 절대 커밋 금지)
+.env
+.env.local
+.env.*.local
+
+# Firebase 서비스 계정 키
+**/firebase-service-account.json
+**/*-service-account.json
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# 빌드 산출물
+**/build/
+**/out/
+**/dist/
+**/node_modules/
+**/.gradle/
