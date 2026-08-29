@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package image.v1;
+
+option java_multiple_files = true;
+option java_package = "flipnote.image.grpc.v1";
+option java_outer_classname = "ImageServiceProto";
+
+service ImageCommandService {
+  // 이미지 url 조회
+  rpc GetUrlByReference(GetUrlByReferenceRequest) returns (GetUrlByReferenceResponse);
+  // 이미지 url 리스트 조회
+  rpc GetUrlsByIds(GetUrlsByIdsRequest) returns (GetUrlsByIdsResponse);
+  // 이미지 활성화
+  rpc ActivateImage(ActivateImageRequest) returns (ActivateImageResponse);
+  // 이미지 변경
+  rpc ChangeImage(ChangeImageRequest) returns (ChangeImageResponse);
+}
+
+enum Type {
+  REFERENCE_TYPE_UNSPECIFIED = 0;
+  USER = 1;
+  GROUP = 2;
+  CARD_SET = 3;
+}
+
+message GetUrlByReferenceRequest {
+  Type reference_type = 1;
+  int64 reference_id = 2;
+}
+
+message GetUrlByReferenceResponse {
+  string image_url = 1;
+}
+
+message GetUrlsByIdsRequest {
+  repeated int64 ids = 1;
+}
+
+message GetUrlsByIdsResponse {
+  map<int64, string> image_urls = 1;
+}
+
+message ActivateImageRequest {
+  int64 image_ref_id = 1;
+  Type reference_type = 2;
+  int64 reference_id = 3;
+}
+
+message ActivateImageResponse {
+  string url = 1;
+}
+
+message ChangeImageRequest {
+  Type reference_type = 1;
+  int64 reference_id = 2;
+  int64 image_ref_id = 3;
+}
+
+message ChangeImageResponse {
+  int64 image_ref_id = 1;
+  string url = 2;
+}

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>그룹 초대 안내</title>
+</head>
+<body style="margin:0; padding:0; background-color:#F7F7F7;">
+<div style="display:none; font-size:1px; color:#333; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;">
+    그룹 초대 메시지입니다. 아래 내용을 확인해 주세요.
+</div>
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F7F7F7; padding:20px;">
+    <tr>
+        <td align="center">
+            <table width="420" cellpadding="0" cellspacing="0" border="0"
+                   style="max-width:420px; margin:0 auto; background:#fff; border-radius:12px; border:1px solid #E5E5E5;">
+                <tr>
+                    <td style="padding: 24px 32px; font-family: 'Pretendard', Apple SD Gothic Neo, Malgun Gothic, sans-serif;">
+                        <h1 style="margin:0; font-size:22px; font-weight:700; color:#222; text-align:center;">
+                            그룹 초대 안내
+                        </h1>
+                        <p style="margin:20px 0; font-size:16px; color:#555; line-height:1.5;">
+                            안녕하세요.<br/>
+                            <b th:text="${groupName}">[그룹명]</b> 그룹에서 회원님을 초대하였습니다.<br/>
+                            아래 버튼을 눌러 회원가입 후 그룹에 참여해 주세요.
+                        </p>
+                        <div style="text-align:center; margin:24px 0;">
+                            <a th:href="${registerUrl}" target="_blank"
+                               style="display:inline-block; padding:12px 24px;
+                                          background-color:#2D8CF0; color:#fff;
+                                          font-weight:700; font-size:16px; border-radius:8px; text-decoration:none;">
+                                회원가입 하러 가기
+                            </a>
+                        </div>
+                        <p style="margin-top:32px; font-size:14px; color:#AAA; text-align:center;">
+                            본 메일은 발신전용입니다.
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+</html>

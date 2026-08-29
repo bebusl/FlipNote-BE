@@ -1,0 +1,70 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: group
+
+  grpc:
+    server:
+      port: 9094
+    image:
+      address: ${GRPC_IMAGE_URL:localhost:9092}
+    user:
+      address: ${GRPC_USER_URL:localhost:9091}
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:}
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+
+springdoc:
+  server-url: ${SWAGGER_SERVER_URL:http://localhost:8080}
+  swagger-ui:
+    path: /groups/swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /groups/v3/api-docs
+
+logging:
+  level:
+    group: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+
+image:
+  default:
+    group: https://flipnote-bucket.s3.ap-northeast-2.amazonaws.com/image/default/group.png
+
+app:
+  resend:
+    api-key: ${RESEND_API_KEY}
+    from-email: ${RESEND_FROM_EMAIL:FlipNote <no-reply@localhost>}
+  client:
+    url: ${APP_CLIENT_URL:http://localhost:3000}

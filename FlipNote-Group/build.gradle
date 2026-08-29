@@ -1,0 +1,113 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '4.0.1'
+	id 'io.spring.dependency-management' version '1.1.7'
+	id 'com.google.protobuf' version '0.9.5'
+}
+
+ext {
+	springGrpcVersion = "1.0.1"
+}
+
+group = 'flipnote'
+version = '0.0.1-SNAPSHOT'
+description = 'Group'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17)
+	}
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencyManagement {
+	imports {
+		mavenBom "org.springframework.grpc:spring-grpc-dependencies:$springGrpcVersion"
+	}
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+	// Spring gRPC Starter
+	implementation 'org.springframework.grpc:spring-grpc-spring-boot-starter'
+	implementation 'com.google.protobuf:protobuf-java'
+	implementation 'io.grpc:grpc-stub'
+	implementation 'io.grpc:grpc-protobuf:1.62.2'
+
+	implementation 'org.springframework.boot:spring-boot-starter-amqp'
+	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.1'
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+	// Email (Resend) + Template + Retry
+	implementation 'com.resend:resend-java:4.1.1'
+	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+
+	compileOnly 'org.projectlombok:lombok'
+	compileOnly 'jakarta.annotation:jakarta.annotation-api:2.1.1'
+	compileOnly 'javax.annotation:javax.annotation-api:1.3.2'
+	runtimeOnly 'com.mysql:mysql-connector-j'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testRuntimeOnly 'com.h2database:h2'
+
+	implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
+	annotationProcessor "com.querydsl:querydsl-apt:5.0.0:jakarta"
+	annotationProcessor "jakarta.annotation:jakarta.annotation-api"
+	annotationProcessor "jakarta.persistence:jakarta.persistence-api"
+}
+
+/**
+ * proto 컴파일 설정
+ * - .proto 위치: src/main/proto
+ * - 생성 위치: build/generated/...
+ */
+protobuf {
+	protoc { artifact = "com.google.protobuf:protoc:3.25.3" }
+	plugins {
+		grpc {
+			artifact = "io.grpc:protoc-gen-grpc-java:1.62.2"
+		}
+	}
+	generateProtoTasks {
+		all().each { task ->
+			task.plugins {
+				grpc {}
+			}
+		}
+	}
+}
+
+def querydslDir = layout.buildDirectory.dir("generated/querydsl").get().asFile
+
+sourceSets {
+	main {
+		java {
+			srcDirs querydslDir,
+					"$buildDir/generated/sources/proto/main/java",
+					"$buildDir/generated/sources/proto/main/grpc"
+		}
+	}
+}
+
+tasks.named('compileJava', JavaCompile) {
+	options.generatedSourceOutputDirectory.set(querydslDir)
+	dependsOn tasks.named('generateProto')
+}
+
+tasks.named('processResources') {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
