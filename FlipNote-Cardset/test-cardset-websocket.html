@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>카드셋 실시간 협업 테스트</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        .cardset-list {
+            flex: 1;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .cards-container {
+            flex: 2;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .card {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            cursor: move;
+        }
+        .card:hover {
+            background: #e9e9e9;
+        }
+        .card-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .card-content {
+            color: #666;
+            font-size: 14px;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 20px 0;
+            border-radius: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <h1>카드셋 실시간 협업 테스트</h1>
+    
+    <div class="controls">
+        <button onclick="connectSocket()">연결</button>
+        <button onclick="disconnectSocket()">연결 해제</button>
+        <button onclick="createCardset()">새 카드셋 생성</button>
+    </div>
+
+    <div id="status" class="status disconnected">연결되지 않음</div>
+
+    <div class="container">
+        <div class="cardset-list">
+            <h3>카드셋 목록</h3>
+            <div id="cardsetList"></div>
+            
+            <h4>카드 개수 변경</h4>
+            <input type="number" id="cardCount" placeholder="카드 개수" min="1" value="10">
+            <button onclick="updateCardCount()">카드 개수 변경</button>
+        </div>
+
+        <div class="cards-container">
+            <h3>카드 목록</h3>
+            <div id="cardsList"></div>
+        </div>
+    </div>
+
+    <div class="log" id="log"></div>
+
+    <script>
+        let socket = null;
+        let currentCardsetId = null;
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${time}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus(connected) {
+            const statusDiv = document.getElementById('status');
+            if (connected) {
+                statusDiv.textContent = '연결됨';
+                statusDiv.className = 'status connected';
+            } else {
+                statusDiv.textContent = '연결되지 않음';
+                statusDiv.className = 'status disconnected';
+            }
+        }
+
+        function connectSocket() {
+            if (socket && socket.connected) {
+                log('❌ 이미 연결되어 있습니다.');
+                return;
+            }
+
+            log('🔄 연결 시도 중...');
+            socket = io('http://localhost:3000/cardsets', {
+                auth: {
+                    token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidGVzdC11c2VyLTEyMyIsInJvbGUiOiJ1c2VyIiwidG9rZW5fdmVyc2lvbiI6MSwiaWF0IjoxNzYxMTQ3NTI1LCJleHAiOjE3NjEyMzM5MjV9.I1ma4Bo6zXwUAV7uNnm30kWM911Bb62xkEqPD1XOdmw' // 유효한 JWT 토큰
+                }
+            });
+
+            socket.on('connect', () => {
+                log('✅ 서버에 연결되었습니다.');
+                updateStatus(true);
+            });
+
+            socket.on('disconnect', () => {
+                log('❌ 서버 연결이 끊어졌습니다.');
+                updateStatus(false);
+            });
+
+            socket.on('cardset-state', (data) => {
+                log(`📋 카드셋 상태 수신: ${data.cardsetId}, 카드 수: ${data.cards.length}`);
+                updateCardsList(data.cards);
+            });
+
+            socket.on('error', (error) => {
+                log(`❌ 에러: ${error.message}`);
+            });
+
+            // 카드셋 목록 로드
+            loadCardsets();
+        }
+
+        function disconnectSocket() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+                updateStatus(false);
+                log('🔌 연결을 해제했습니다.');
+            }
+        }
+
+        function loadCardsets() {
+            // 실제로는 API를 통해 카드셋 목록을 가져와야 함
+            const cardsets = [
+                { id: 1, title: '테스트 카드셋 1' },
+                { id: 2, title: '테스트 카드셋 2' }
+            ];
+            
+            const cardsetList = document.getElementById('cardsetList');
+            cardsetList.innerHTML = '';
+            
+            cardsets.forEach(cardset => {
+                const div = document.createElement('div');
+                div.className = 'card';
+                div.innerHTML = `
+                    <div class="card-title">${cardset.title}</div>
+                    <button onclick="joinCardset(${cardset.id})">조인</button>
+                `;
+                cardsetList.appendChild(div);
+            });
+        }
+
+        function joinCardset(cardsetId) {
+            if (!socket || !socket.connected) {
+                log('❌ 먼저 서버에 연결하세요.');
+                return;
+            }
+
+            log(`🔄 카드셋 ${cardsetId}에 조인 중...`);
+            socket.emit('join-cardset', { cardsetId });
+            currentCardsetId = cardsetId;
+        }
+
+        // 카드 개수 변경 (REST API 사용)
+        async function updateCardCount() {
+            if (!currentCardsetId) {
+                log('❌ 먼저 카드셋에 조인하세요.');
+                return;
+            }
+
+            const newCount = parseInt(document.getElementById('cardCount').value);
+            if (isNaN(newCount) || newCount < 1) {
+                log('❌ 유효한 카드 개수를 입력하세요.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://localhost:3000/cardsets/${currentCardsetId}/card-count`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ cardCount: newCount })
+                });
+
+                if (response.ok) {
+                    log(`✅ 카드 개수가 ${newCount}개로 변경되었습니다.`);
+                    // 웹소켓으로 새 카드 목록 요청
+                    socket.emit('sync', { cardsetId: currentCardsetId, syncStep: 0 });
+                } else {
+                    log('❌ 카드 개수 변경에 실패했습니다.');
+                }
+            } catch (error) {
+                log(`❌ 오류: ${error.message}`);
+            }
+        }
+
+        function updateCardsList(cards) {
+            const cardsList = document.getElementById('cardsList');
+            cardsList.innerHTML = '';
+            
+            if (cards.length === 0) {
+                cardsList.innerHTML = '<p>카드가 없습니다.</p>';
+                return;
+            }
+
+            cards.forEach(card => {
+                const div = document.createElement('div');
+                div.className = 'card';
+                div.innerHTML = `
+                    <div class="card-content">${card.content || '내용 없음'}</div>
+                    <button onclick="deleteCard('${card.id}')">삭제</button>
+                `;
+                cardsList.appendChild(div);
+            });
+        }
+
+        function deleteCard(cardId) {
+            if (!currentCardsetId) {
+                log('❌ 먼저 카드셋에 조인하세요.');
+                return;
+            }
+
+            socket.emit('delete-card', { cardsetId: currentCardsetId, cardId });
+            log(`🗑️ 카드 삭제 요청: ${cardId}`);
+        }
+
+        function createCardset() {
+            const title = prompt('카드셋 제목을 입력하세요:');
+            if (title) {
+                log(`📝 새 카드셋 생성: ${title}`);
+                // 실제로는 API를 통해 카드셋을 생성해야 함
+            }
+        }
+
+        // 페이지 로드 시 자동 연결
+        window.onload = function() {
+            log('🚀 페이지가 로드되었습니다.');
+        };
+    </script>
+</body>
+</html>

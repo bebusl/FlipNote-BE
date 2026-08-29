@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+option java_package = "flipnote.user.grpc";
+option java_outer_classname = "UserQueryProto";
+option java_multiple_files = true;
+
+package user_query;
+
+service UserQueryService {
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc GetUsers(GetUsersRequest) returns (GetUsersResponse);
+  rpc GetUserByEmail(GetUserByEmailRequest) returns (GetUserByEmailResponse);
+  rpc GetUserByToken(GetUserByTokenRequest) returns (GetUserByTokenResponse);
+}
+
+message GetUserRequest {
+  int64 user_id = 1;
+}
+
+message GetUserResponse {
+  int64 id = 1;
+  string email = 2;
+  string nickname = 3;
+  string profile_image_url = 4;
+}
+
+message GetUsersRequest {
+  repeated int64 user_ids = 1;
+}
+
+message GetUsersResponse {
+  repeated GetUserResponse users = 1;
+}
+
+message GetUserByEmailRequest {
+  string email = 1;
+}
+
+message GetUserByEmailResponse {
+  bool exists = 1;
+  GetUserResponse user = 2;
+}
+
+message GetUserByTokenRequest {
+  string access_token = 1;
+}
+
+message GetUserByTokenResponse {
+  int64 user_id = 1;
+  string nickname = 2;
+}

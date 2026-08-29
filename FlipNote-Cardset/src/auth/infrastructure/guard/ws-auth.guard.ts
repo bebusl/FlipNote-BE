@@ -1,0 +1,66 @@
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
+import { WsException } from '@nestjs/websockets';
+import { Socket } from 'socket.io';
+import { UserGrpcClient } from '../../../cardset/infrastructure/grpc/user-grpc.client';
+
+@Injectable()
+export class WsAuthGuard implements CanActivate {
+  private readonly logger = new Logger(WsAuthGuard.name);
+
+  constructor(private readonly userGrpcClient: UserGrpcClient) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const client: Socket = context.switchToWs().getClient<Socket>();
+
+    const rawAuth: unknown = client.handshake.auth?.token;
+    const rawHeader = client.handshake.headers?.authorization;
+    const rawCookie = client.handshake.headers?.cookie;
+
+    const fromCookie =
+      typeof rawCookie === 'string'
+        ? rawCookie
+            .split(';')
+            .map((c) => c.trim())
+            .find((c) => c.startsWith('accessToken='))
+            ?.slice('accessToken='.length)
+        : undefined;
+
+    const bearer =
+      (typeof rawAuth === 'string' ? rawAuth : undefined) ??
+      (typeof rawHeader === 'string' ? rawHeader : undefined);
+
+    const rawToken =
+      bearer && bearer.startsWith('Bearer ') ? bearer.slice(7) : bearer;
+    const token = fromCookie?.trim() || rawToken?.trim() || undefined;
+
+    this.logger.log(`[WsAuthGuard] cookie: ${String(rawCookie)}`);
+    this.logger.log(`[WsAuthGuard] fromCookie: ${String(fromCookie)}`);
+    this.logger.log(`[WsAuthGuard] token: ${String(token)}`);
+
+    if (!token) {
+      this.logger.warn(`No token provided for client ${client.id}`);
+      throw new WsException('인증 토큰이 없습니다.');
+    }
+
+    try {
+      const { userId, nickname } = await this.userGrpcClient.getUserByToken(token);
+      (client.data as { user: unknown }).user = {
+        userId: String(userId),
+        nickname,
+      };
+      return true;
+    } catch (err: unknown) {
+      this.logger.warn(
+        `Token verification failed for client ${client.id}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+      throw new WsException('유효하지 않은 토큰입니다.');
+    }
+  }
+}

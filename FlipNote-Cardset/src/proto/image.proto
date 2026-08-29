@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package image.v1;
+
+service ImageCommandService {
+  rpc GetUrlByReference (GetUrlByReferenceRequest) returns (GetUrlByReferenceResponse);
+  rpc ActivateImage (ActivateImageRequest) returns (ActivateImageResponse);
+  rpc ChangeImage (ChangeImageRequest) returns (ChangeImageResponse);
+}
+
+enum ReferenceType {
+  REFERENCE_TYPE_UNSPECIFIED = 0;
+  USER = 1;
+  GROUP = 2;
+  CARD_SET = 3;
+}
+
+message GetUrlByReferenceRequest {
+  ReferenceType reference_type = 1;
+  int64 reference_id = 2;
+}
+
+message GetUrlByReferenceResponse {
+  string image_url = 1;
+}
+
+message ActivateImageRequest {
+  int64 image_ref_id = 1;
+  ReferenceType reference_type = 2;
+  int64 reference_id = 3;
+}
+
+message ActivateImageResponse {}
+
+message ChangeImageRequest {
+  ReferenceType reference_type = 1;
+  int64 reference_id = 2;
+  int64 image_ref_id = 3;
+}
+
+message ChangeImageResponse {
+  int64 image_ref_id = 1;
+  string url = 2;
+}
