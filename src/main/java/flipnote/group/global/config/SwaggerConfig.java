@@ -7,11 +7,15 @@ import io.swagger.v3.oas.models.servers.Server;
 import org.springdoc.core.customizers.OperationCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.List;
 
 @Configuration
 public class SwaggerConfig {
+
+    @Value("${swagger.server-url:http://localhost:8080}")
+    private String swaggerServerUrl;
 
     @Bean
     public OpenAPI openAPI() {
@@ -21,7 +25,7 @@ public class SwaggerConfig {
                 .description("FlipNote Group API")
                 .version("1.0.0"))
             .servers(List.of(
-                new Server().url("https://api3.flipnote.site").description("Production"),
+                new Server().url(swaggerServerUrl).description("Configured"),
                 new Server().url("http://localhost:8084").description("Local")
             ));
     }
