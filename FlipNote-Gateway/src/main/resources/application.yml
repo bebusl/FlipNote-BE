@@ -1,0 +1,209 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      routes:
+        - id: user-private
+          uri: http://user-service:8081
+          predicates:
+            - name: Path
+              args:
+                patterns:
+                  - /v1/users/me
+                  - /v1/users/{userId}
+                  - /v1/users
+          filters:
+            - AuthenticationFilter
+
+        - id: auth-public
+          uri: http://user-service:8081
+          predicates:
+            - name: Path
+              args:
+                patterns:
+                  - /v1/auth/login
+                  - /v1/auth/register
+                  - /v1/auth/token/refresh
+                  - /v1/auth/email-verification/request
+                  - /v1/auth/email-verification
+                  - /v1/auth/password-reset/request
+                  - /v1/auth/password-reset
+                  - /oauth2/callback/*
+                  - /oauth2/authorization/*
+
+        - id: auth-private
+          uri: http://user-service:8081
+          predicates:
+            - name: Path
+              args:
+                patterns:
+                  - /v1/auth/logout
+                  - /v1/auth/password
+                  - /v1/auth/social-links
+                  - /v1/auth/social-links/*
+                  - /v1/oauth2/links/*
+
+          filters:
+            - AuthenticationFilter
+
+        - id: user-swagger
+          uri: http://user-service:8081
+          predicates:
+            - name: Path
+              args:
+                patterns:
+                  - /users/swagger-ui.html
+                  - /users/swagger-ui/**
+                  - /users/v3/api-docs
+                  - /users/v3/api-docs/**
+
+        - id: reaction-private
+          uri: http://reaction-service:8083
+          predicates:
+            - name: Path
+              args:
+                patterns:
+                  - /v1/likes/{targetType}/{targetId}
+                  - /v1/likes/{targetType}
+                  - /v1/bookmarks/{targetType}/{targetId}
+                  - /v1/bookmarks/{targetType}
+          filters:
+            - AuthenticationFilter
+
+        - id: image-public
+          uri: http://image-service:8082
+          predicates:
+            - Path=/v1/images/upload
+
+        - id: image-private
+          uri: http://image-service:8082
+          predicates:
+            - Path=/v1/images/**
+          filters:
+            - AuthenticationFilter
+
+        - id: group-cardsets
+          uri: http://cardset-service:8085
+          predicates:
+            - Path=/v1/groups/*/card-sets
+          filters:
+            - AuthenticationFilter
+
+        - id: group
+          uri: http://group-service:8084
+          predicates:
+            - name: Path
+              args:
+                patterns:
+                  - /v1/groups/**
+                  - /v1/joins/**
+                  - /v1/group-invitations
+          filters:
+            - AuthenticationFilter
+
+        - id: group-swagger
+          uri: http://group-service:8084
+          predicates:
+            - name: Path
+              args:
+                patterns:
+                  - /groups/swagger-ui.html
+                  - /groups/swagger-ui/**
+                  - /groups/v3/api-docs
+                  - /groups/v3/api-docs/**
+
+        - id: group-health
+          uri: http://group-service:8084
+          predicates:
+            - Path=/groups/actuator/health
+
+        - id: cardset-swagger
+          uri: http://cardset-service:8085
+          predicates:
+            - name: Path
+              args:
+                patterns:
+                  - /card-sets/swagger-ui.html
+                  - /card-sets/swagger-ui/**
+                  - /card-sets/v3/api-docs
+                  - /card-sets/v3/api-docs/**
+
+        - id: cardset-health
+          uri: http://cardset-service:8085
+          predicates:
+            - Path=/card-sets/health
+
+        - id: cardset-private
+          uri: http://cardset-service:8085
+          predicates:
+            - name: Path
+              args:
+                patterns:
+                  - /v1/card-sets
+                  - /v1/card-sets/**
+                  - /v1/cards
+                  - /v1/cards/**
+          filters:
+            - AuthenticationFilter
+
+        - id: cardset-websocket
+          uri: ws://cardset-service:8085
+          predicates:
+            - Path=/v1/card-sets/ws/**
+          filters:
+            - AuthenticationFilter
+
+        - id: notification-private
+          uri: http://notification-service:8086
+          predicates:
+            - name: Path
+              args:
+                patterns:
+                  - /v1/notifications/**
+          filters:
+            - AuthenticationFilter
+
+        - id: notification-swagger
+          uri: http://notification-service:8086
+          predicates:
+            - name: Path
+              args:
+                patterns:
+                  - /notifications/swagger-ui.html
+                  - /notifications/swagger-ui/**
+                  - /notifications/v3/api-docs
+                  - /notifications/v3/api-docs/**
+
+app:
+  user-service:
+    url: http://user-service:8081
+  image-service:
+    url: http://image-service:8082
+  group-service:
+    url: http://group-service:8084
+  cardset-service:
+    url: http://cardset-service:8085
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+
+logging:
+  level:
+    flipnote.apigateway: DEBUG

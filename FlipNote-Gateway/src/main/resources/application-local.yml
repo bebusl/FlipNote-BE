@@ -1,0 +1,112 @@
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: user-private
+          uri: http://localhost:8081
+          predicates:
+            - name: Path
+              args:
+                patterns:
+                  - /v1/users/me
+                  - /v1/users/{userId}
+                  - /v1/users
+          filters:
+            - AuthenticationFilter
+
+        - id: auth-public
+          uri: http://localhost:8081
+          predicates:
+            - name: Path
+              args:
+                patterns:
+                  - /v1/auth/login
+                  - /v1/auth/register
+                  - /v1/auth/token/refresh
+                  - /v1/auth/email-verification/request
+                  - /v1/auth/email-verification
+                  - /v1/auth/password-reset/request
+                  - /v1/auth/password-reset
+                  - /v1/oauth2/callback/*
+
+        - id: auth-private
+          uri: http://localhost:8081
+          predicates:
+            - name: Path
+              args:
+                patterns:
+                  - /v1/auth/logout
+                  - /v1/auth/password
+                  - /v1/auth/social-links
+                  - /v1/auth/social-links/*
+                  - /v1/oauth2/authorization/*
+                  - /v1/oauth2/links/*
+
+          filters:
+            - AuthenticationFilter
+
+        - id: user-swagger
+          uri: http://localhost:8081
+          predicates:
+            - name: Path
+              args:
+                patterns:
+                  - /users/swagger-ui.html
+                  - /users/swagger-ui/**
+                  - /users/v3/api-docs
+                  - /users/v3/api-docs/**
+
+        - id: reaction-private
+          uri: http://localhost:8083
+          predicates:
+            - name: Path
+              args:
+                patterns:
+                  - /v1/likes/{targetType}/{targetId}
+                  - /v1/likes/{targetType}
+                  - /v1/bookmarks/{targetType}/{targetId}
+                  - /v1/bookmarks/{targetType}
+          filters:
+            - AuthenticationFilter
+
+        - id: image-public
+          uri: http://image-service:8082
+          predicates:
+            - Path=/v1/images/upload
+
+        - id: image-private
+          uri: http://image-service:8082
+          predicates:
+            - Path=/v1/images/**
+          filters:
+            - AuthenticationFilter
+
+        - id: group
+          uri: http://group-service:8084
+          predicates:
+            - name: Path
+            - args:
+                patterns:
+                  - /v1/groups/**
+                  - /v1/joins/**
+          filters:
+            - AuthenticationFilter
+
+        - id: group-swagger
+          uri: http://localhost:8084
+          predicates:
+            - name: Path
+              args:
+                patterns:
+                  - /groups/swagger-ui.html
+                  - /groups/swagger-ui/**
+                  - /groups/v3/api-docs
+                  - /groups/v3/api-docs/**
+
+app:
+  user-service:
+    url: http://localhost:8081
+  image-service:
+    url: http://localhost:8082
+  group-service:
+    url: http://localhost:8084

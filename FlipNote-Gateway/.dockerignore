@@ -1,0 +1,9 @@
+.git
+.gitignore
+.gradle
+.idea
+*.md
+build/tmp
+build/classes
+build/generated
+build/resources
