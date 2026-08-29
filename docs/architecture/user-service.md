@@ -177,7 +177,7 @@ ImageCommandService (image.proto)
 | `GOOGLE_CLIENT_ID` | (필수) | Google OAuth2 클라이언트 ID |
 | `GOOGLE_CLIENT_SECRET` | (필수) | Google OAuth2 클라이언트 Secret |
 | `OAUTH_BASE_URL` | `https://api3.flipnote.site` | OAuth 콜백 base URL |
-| `SPRING_DATASOURCE_URL` | `jdbc:mysql://localhost:3306/flipnote_user` | DB URL |
+| `SPRING_DATASOURCE_URL` | `jdbc:mysql://localhost:3307/flipnote_user` | DB URL |
 | `SPRING_DATASOURCE_USERNAME` | `root` | DB 사용자 |
 | `SPRING_DATASOURCE_PASSWORD` | `root` | DB 비밀번호 |
 | `SPRING_REDIS_HOST` | `localhost` | Redis 호스트 |

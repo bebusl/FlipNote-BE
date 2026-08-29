@@ -91,7 +91,7 @@ docker compose down -v
 | 대상 | 주소 | 비고 |
 |---|---|---|
 | **API Gateway** | `http://localhost:8080` | **모든 클라이언트 요청은 여기로** |
-| MySQL | `localhost:3306` | DBeaver 등 GUI용. 계정은 `root` / `MYSQL_ROOT_PASSWORD` |
+| MySQL | `127.0.0.1:3307` | DBeaver 등 GUI용. 계정은 `root` / `MYSQL_ROOT_PASSWORD` |
 | RabbitMQ 관리 UI | `http://localhost:15672` | `guest` / `guest` |
 
 개별 서비스(8081~8086)는 외부에 노출하지 않습니다. Gateway를 통해서만 접근하세요.

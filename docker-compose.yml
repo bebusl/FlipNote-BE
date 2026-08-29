@@ -9,7 +9,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-flipnote_local}
     ports:
-      - "3306:3306"    # DBeaver 등 GUI로 직접 붙기 위해 노출 (로컬 전용)
+      - "3307:3306"    # DBeaver 등 GUI로 직접 붙기 위해 노출 (로컬 전용, macOS MySQL과 충돌 방지)
     volumes:
       - mysql_data:/var/lib/mysql
       - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql

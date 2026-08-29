@@ -47,7 +47,7 @@
 
 ```text
 # ─── Database ───────────────────────────────────────────
-DB_URL=jdbc:mysql://localhost:3306/flipnote_reaction
+DB_URL=jdbc:mysql://localhost:3307/flipnote_reaction
 DB_USERNAME=
 DB_PASSWORD=
 # create | create-drop | update | validate | none

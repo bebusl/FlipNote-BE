@@ -327,7 +327,7 @@ Vault 경로: `secret/data/flipnote/{서비스이름}`
 
 | 환경변수               | 설명                        | 기본값                                      |
 | ---------------------- | --------------------------- | ------------------------------------------- |
-| `DB_URL`               | MySQL 연결 URL              | `jdbc:mysql://localhost:3306/flipnote_user` |
+| `DB_URL`               | MySQL 연결 URL              | `jdbc:mysql://localhost:3307/flipnote_user` |
 | `DB_USERNAME`          | DB 사용자                   | `root`                                      |
 | `DB_PASSWORD`          | DB 비밀번호                 | `root`                                      |
 | `REDIS_HOST`           | Redis 호스트                | `localhost`                                 |

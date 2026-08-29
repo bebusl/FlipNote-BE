@@ -49,7 +49,7 @@
 
 ```text
 # ─── Database ───────────────────────────────────────────
-DB_URL=jdbc:mysql://localhost:3306/flipnote_user
+DB_URL=jdbc:mysql://localhost:3307/flipnote_user
 DB_USERNAME=
 DB_PASSWORD=
 
