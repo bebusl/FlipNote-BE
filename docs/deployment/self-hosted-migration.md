@@ -112,7 +112,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - id: meta
         uses: docker/metadata-action@v5
         with:
@@ -127,9 +127,8 @@ jobs:
 
 **Dockerfile은 안 고쳐도 된다.** 7개 전부 자기 디렉토리 안만 `COPY` 하고 있어서(`gradlew`, `gradle/`, `build.gradle*`, `src`, `package*.json`) 빌드 컨텍스트만 바꾸면 그대로 동작한다.
 
-`GHCR_PAT`에는 `bebusl` 패키지의 `packages:write` 권한이 필요하다. 코드 저장소와 GHCR
-네임스페이스의 소유자가 다르면 `GITHUB_TOKEN`으로는 push할 수 없다. public 패키지로 운영하므로
-k8s image pull secret은 필요 없다.
+BE 저장소와 GHCR 네임스페이스가 모두 `bebusl`이므로 별도 PAT 없이 워크플로의
+`GITHUB_TOKEN`을 사용한다. public 패키지로 운영하므로 k8s image pull secret은 필요 없다.
 
 ---
 
