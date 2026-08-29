@@ -1,0 +1,74 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/bebusl/flipnote-user
+  pullPolicy: IfNotPresent
+  tag: ""
+
+nameOverride: ""
+fullnameOverride: ""
+
+existingSecret: "user-service-secret"
+
+imagePullSecrets: []
+
+service:
+  type: ClusterIP
+  port: 8081
+  grpcPort: 9091
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+env: []
+
+configMap:
+  enabled: false
+  data: {}
+
+secret:
+  enabled: false
+  data: {}
+
+externalSecret:
+  enabled: false
+  refreshInterval: "1h"
+  secretStoreName: "vault-backend"
+  secretStoreKind: "ClusterSecretStore"
+  remoteKey: "secret/data/flipnote/user-service"
+  data:
+    - secretKey: DB_URL
+      remoteProperty: DB_URL
+    - secretKey: DB_USERNAME
+      remoteProperty: DB_USERNAME
+    - secretKey: DB_PASSWORD
+      remoteProperty: DB_PASSWORD
+    - secretKey: REDIS_HOST
+      remoteProperty: REDIS_HOST
+    - secretKey: REDIS_PASSWORD
+      remoteProperty: REDIS_PASSWORD
+    - secretKey: REDIS_PORT
+      remoteProperty: REDIS_PORT
+    - secretKey: GOOGLE_CLIENT_ID
+      remoteProperty: GOOGLE_CLIENT_ID
+    - secretKey: GOOGLE_CLIENT_SECRET
+      remoteProperty: GOOGLE_CLIENT_SECRET
+    - secretKey: APP_CLIENT_URL
+      remoteProperty: APP_CLIENT_URL
+    - secretKey: JWT_SECRET
+      remoteProperty: JWT_SECRET
+    - secretKey: APP_RESEND_API_KEY
+      remoteProperty: APP_RESEND_API_KEY
+    - secretKey: RESEND_FROM_EMAIL
+      remoteProperty: RESEND_FROM_EMAIL
+    - secretKey: DDL_AUTO
+      remoteProperty: DDL_AUTO
+    - secretKey: OAUTH_BASE_URL
+      remoteProperty: OAUTH_BASE_URL
+    - secretKey: SWAGGER_SERVER_URL
+      remoteProperty: SWAGGER_SERVER_URL

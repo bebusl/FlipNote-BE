@@ -1,0 +1,58 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/bebusl/flipnote-reaction
+  pullPolicy: IfNotPresent
+  tag: ""
+
+nameOverride: ""
+fullnameOverride: ""
+
+existingSecret: "reaction-service-secret"
+
+imagePullSecrets: []
+
+service:
+  type: ClusterIP
+  port: 8083
+  grpcPort: 9093
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+env: []
+
+configMap:
+  enabled: false
+  data: {}
+
+secret:
+  enabled: false
+  data: {}
+
+externalSecret:
+  enabled: false
+  refreshInterval: "1h"
+  secretStoreName: "vault-backend"
+  secretStoreKind: "ClusterSecretStore"
+  remoteKey: "secret/data/flipnote/reaction-service"
+  data:
+    - secretKey: DB_URL
+      remoteProperty: DB_URL
+    - secretKey: DB_USERNAME
+      remoteProperty: DB_USERNAME
+    - secretKey: DB_PASSWORD
+      remoteProperty: DB_PASSWORD
+    - secretKey: RABBITMQ_HOST
+      remoteProperty: RABBITMQ_HOST
+    - secretKey: RABBITMQ_PORT
+      remoteProperty: RABBITMQ_PORT
+    - secretKey: RABBITMQ_USERNAME
+      remoteProperty: RABBITMQ_USERNAME
+    - secretKey: RABBITMQ_PASSWORD
+      remoteProperty: RABBITMQ_PASSWORD

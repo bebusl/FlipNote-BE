@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: api-gateway
+  namespace: argocd
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: "app=ghcr.io/bebusl/flipnote-api-gateway:main"
+    argocd-image-updater.argoproj.io/app.helm.image-name: "image.repository"
+    argocd-image-updater.argoproj.io/app.helm.image-tag: "image.tag"
+    argocd-image-updater.argoproj.io/app.update-strategy: "digest"
+    argocd-image-updater.argoproj.io/write-back-method: git
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/bebusl/FlipNote-Infra.git
+    targetRevision: main
+    path: charts/apps/api-gateway
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: flipnote
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

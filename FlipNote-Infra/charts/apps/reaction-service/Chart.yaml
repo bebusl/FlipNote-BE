@@ -1,0 +1,6 @@
+apiVersion: v2
+name: reaction-service
+description: Flipnote Reaction Service
+type: application
+version: 0.1.0
+appVersion: "main"

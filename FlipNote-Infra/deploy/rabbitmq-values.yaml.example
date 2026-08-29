@@ -1,0 +1,9 @@
+# Copy to a private file, replace the credentials, and pass it to Helm.
+# Do not commit the copied file.
+auth:
+  username: flipnote
+  password: "CHANGE_ME_TO_A_LONG_RANDOM_PASSWORD"
+  erlangCookie: "CHANGE_ME_TO_A_LONG_RANDOM_COOKIE"
+persistence:
+  enabled: true
+  size: 5Gi

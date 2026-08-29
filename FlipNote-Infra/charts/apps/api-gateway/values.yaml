@@ -1,0 +1,58 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/bebusl/flipnote-api-gateway
+  pullPolicy: IfNotPresent
+  tag: ""
+
+nameOverride: ""
+fullnameOverride: ""
+
+existingSecret: "api-gateway-secret"
+
+imagePullSecrets: []
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: api3.flipnote.site
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+env: []
+
+configMap:
+  enabled: false
+  data: {}
+
+secret:
+  enabled: false
+  data: {}
+
+externalSecret:
+  enabled: false
+  refreshInterval: "1h"
+  secretStoreName: "vault-backend"
+  secretStoreKind: "ClusterSecretStore"
+  # Vault에서 가져올 시크릿 경로 (예: secret/data/flipnote/api-gateway)
+  remoteKey: "secret/data/flipnote/api-gateway"
+  # 가져올 시크릿 키 목록
+  data: []
+  # - secretKey: DB_PASSWORD      # K8s Secret에 저장될 키 이름
+  #   remoteProperty: DB_PASSWORD  # Vault에서 가져올 프로퍼티 이름

@@ -1,0 +1,64 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/bebusl/flipnote-image
+  pullPolicy: IfNotPresent
+  tag: ""
+
+nameOverride: ""
+fullnameOverride: ""
+
+existingSecret: "image-service-secret"
+
+imagePullSecrets: []
+
+service:
+  type: ClusterIP
+  port: 8082
+  grpcPort: 9092
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+env: []
+
+configMap:
+  enabled: false
+  data: {}
+
+secret:
+  enabled: false
+  data: {}
+
+externalSecret:
+  enabled: false
+  refreshInterval: "1h"
+  secretStoreName: "vault-backend"
+  secretStoreKind: "ClusterSecretStore"
+  remoteKey: "secret/data/flipnote/image-service"
+  data:
+    - secretKey: DB_URL
+      remoteProperty: DB_URL
+    - secretKey: SPRING_DATASOURCE_USERNAME
+      remoteProperty: SPRING_DATASOURCE_USERNAME
+    - secretKey: SPRING_DATASOURCE_PASSWORD
+      remoteProperty: SPRING_DATASOURCE_PASSWORD
+    - secretKey: S3_ACCESS_KEY
+      remoteProperty: S3_ACCESS_KEY
+    - secretKey: S3_BUCKET_NAME
+      remoteProperty: S3_BUCKET_NAME
+    - secretKey: S3_BUCKET_REGION
+      remoteProperty: S3_BUCKET_REGION
+    - secretKey: S3_SECRET_KEY
+      remoteProperty: S3_SECRET_KEY
+    - secretKey: SPRING_DATA_REDIS_HOST
+      remoteProperty: SPRING_DATA_REDIS_HOST
+    - secretKey: SPRING_DATA_REDIS_PORT
+      remoteProperty: SPRING_DATA_REDIS_PORT
+    - secretKey: SPRING_DATA_REDIS_PASSWORD
+      remoteProperty: SPRING_DATA_REDIS_PASSWORD

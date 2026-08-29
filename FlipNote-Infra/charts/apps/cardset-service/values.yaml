@@ -1,0 +1,100 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/bebusl/flipnote-cardset
+  pullPolicy: IfNotPresent
+  tag: ""
+
+nameOverride: ""
+fullnameOverride: ""
+
+existingSecret: "cardset-service-secret"
+
+imagePullSecrets: []
+
+service:
+  type: ClusterIP
+  port: 8085
+  grpcPort: 9095
+
+livenessProbe:
+  tcpSocket:
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  failureThreshold: 3
+
+readinessProbe:
+  tcpSocket:
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  failureThreshold: 3
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 768Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+env: []
+
+configMap:
+  enabled: false
+  data: {}
+
+secret:
+  enabled: false
+  data: {}
+
+externalSecret:
+  enabled: false
+  refreshInterval: "1h"
+  secretStoreName: "vault-backend"
+  secretStoreKind: "ClusterSecretStore"
+  remoteKey: "secret/data/flipnote/cardset-service"
+  data:
+    - secretKey: DB_DATABASE
+      remoteProperty: DB_DATABASE
+    - secretKey: DB_HOST
+      remoteProperty: DB_HOST
+    - secretKey: DB_PASSWORD
+      remoteProperty: DB_PASSWORD
+    - secretKey: DB_PORT
+      remoteProperty: DB_PORT
+    - secretKey: DB_SYNCHRONIZE
+      remoteProperty: DB_SYNCHRONIZE
+    - secretKey: DB_USERNAME
+      remoteProperty: DB_USERNAME
+    - secretKey: DEFAULT_CARDSET_IMAGE_URL
+      remoteProperty: DEFAULT_CARDSET_IMAGE_URL
+    - secretKey: GROUP_GRPC_URL
+      remoteProperty: GROUP_GRPC_URL
+    - secretKey: GRPC_PORT
+      remoteProperty: GRPC_PORT
+    - secretKey: IMAGE_GRPC_URL
+      remoteProperty: IMAGE_GRPC_URL
+    - secretKey: NODE_ENV
+      remoteProperty: NODE_ENV
+    - secretKey: PORT
+      remoteProperty: PORT
+    - secretKey: REDIS_HOST
+      remoteProperty: REDIS_HOST
+    - secretKey: REDIS_PASSWORD
+      remoteProperty: REDIS_PASSWORD
+    - secretKey: REDIS_PORT
+      remoteProperty: REDIS_PORT
+    - secretKey: SKIP_WS_AUTH
+      remoteProperty: SKIP_WS_AUTH
+    - secretKey: USER_GRPC_URL
+      remoteProperty: USER_GRPC_URL
+    - secretKey: RABBITMQ_URL
+      remoteProperty: RABBITMQ_URL
+    - secretKey: SKIP_USER_GRPC
+      remoteProperty: SKIP_USER_GRPC
+    - secretKey: SKIP_REACTION_GRPC
+      remoteProperty: SKIP_REACTION_GRPC
+    - secretKey: GRPC_REACTION_URL
+      remoteProperty: GRPC_REACTION_URL
