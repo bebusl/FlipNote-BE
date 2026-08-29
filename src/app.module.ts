@@ -31,7 +31,7 @@ import { CardsetIncrementalOrmEntity } from './collaboration/infrastructure/pers
         CardsetContentOrmEntity,
         CardsetIncrementalOrmEntity,
       ],
-      synchronize: true,
+      synchronize: process.env.DB_SYNCHRONIZE === 'true',
     }),
     AuthModule,
     CardsetModule,
