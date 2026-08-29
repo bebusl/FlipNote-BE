@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package group.v1;
+
+
+option java_multiple_files = true;
+option java_package = "flipnote.group.grpc.v1";
+option java_outer_classname = "GroupServiceProto";
+
+service GroupCommandService {
+
+  // 그룹 이름 조회
+  rpc GetGroupName(GetGroupNameRequest) returns (GetGroupNameResponse);
+}
+
+message GetGroupNameRequest {
+  int64 group_id = 1;
+}
+
+message GetGroupNameResponse {
+  string group_name = 1;
+}

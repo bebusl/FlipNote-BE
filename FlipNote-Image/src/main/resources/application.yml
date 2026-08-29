@@ -1,0 +1,68 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: image
+
+  grpc:
+    server:
+      port: 9092
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST}
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
+      port: ${SPRING_DATA_REDIS_PORT}
+
+
+cloud:
+  aws:
+    bucket: ${S3_BUCKET_NAME}
+    region: ${S3_BUCKET_REGION}
+    credentials:
+      access-key: ${S3_ACCESS_KEY}
+      secret-key: ${S3_SECRET_KEY}
+    stack:
+      auto: false
+
+
+image-clean:
+  batch-size: 300
+  orphan-grace-minutes: 10
+
+image:
+  default:
+    user: https://flipnote-bucket.s3.ap-northeast-2.amazonaws.com/image/default/user.png
+    group: https://flipnote-bucket.s3.ap-northeast-2.amazonaws.com/image/default/group.png
+    cardSet: https://flipnote-bucket.s3.ap-northeast-2.amazonaws.com/image/default/cardset.png
+
+logging:
+  level:
+    flipnote.image: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
