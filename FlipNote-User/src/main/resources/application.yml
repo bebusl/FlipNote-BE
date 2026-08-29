@@ -1,0 +1,95 @@
+spring:
+  application:
+    name: user
+
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/flipnote_user}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
+  jpa:
+    hibernate:
+      ddl-auto: ${DDL_AUTO:update}
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  grpc:
+    server:
+      port: ${GRPC_PORT:9091}
+    client:
+      channels:
+        image-service:
+          address: static://image-service:9092
+
+server:
+  port: 8081
+
+springdoc:
+  server-url: ${SWAGGER_SERVER_URL:http://localhost:8080}
+  swagger-ui:
+    path: /users/swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /users/v3/api-docs
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-expiration: ${JWT_ACCESS_EXPIRATION:900000}
+  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+
+app:
+  resend:
+    api-key: ${APP_RESEND_API_KEY}
+    from-email: ${RESEND_FROM_EMAIL:FlipNote <no-reply@localhost>}
+  client:
+    url: ${APP_CLIENT_URL:http://localhost:3000}
+    paths:
+      password-reset: /reset-password
+      social-link-success: /social-link/success
+      social-link-failure: /social-link/failure
+      social-link-conflict: /social-link/conflict
+      social-login-success: /social-login/success
+      social-login-failure: /social-login/failure
+  oauth2:
+    base-url: ${OAUTH_BASE_URL:http://localhost:8080}
+    providers:
+      google:
+        client-id: ${GOOGLE_CLIENT_ID:}
+        client-secret: ${GOOGLE_CLIENT_SECRET:}
+        redirect-uri: /oauth2/callback/google
+        authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+        token-uri: https://oauth2.googleapis.com/token
+        user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+        scope:
+          - email
+          - profile
+
+logging:
+  level:
+    flipnote.user: debug

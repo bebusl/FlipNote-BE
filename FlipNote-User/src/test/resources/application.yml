@@ -1,0 +1,58 @@
+logging:
+  level:
+    flipnote.user: debug
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show_sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+
+  thymeleaf:
+    check-template-location: false
+
+  grpc:
+    server:
+      port: 0
+
+jwt:
+  secret: "55ca298dcfc216e215622e3f48a251abaa4e8bb973074f065ab170e311acc15811d01a2407290c3ac143648196306d4a6f666a4ed364d3df633e08eb184bb0aea0f2edde4fd2d7fa68ea95ddbc421ff532ce47bde775975911042d665bc22d88a9fa26a03bb4d25530b8cdeb1247d87c9e3efcd721e368b0566b00a43308a729"
+  access-token-expiration: 1800000
+  refresh-token-expiration: 604800000
+
+app:
+  resend:
+    api-key: test-api-key
+    from-email: test@test.com
+  client:
+    url: http://localhost:3000
+    paths:
+      password-reset: /password-reset
+      social-link-success: /social-link/success
+      social-link-failure: /social-link/failure
+      social-link-conflict: /social-link/conflict
+      social-login-success: /social-login/success
+      social-login-failure: /social-login/failure
+  oauth2:
+    base-url: http://localhost:8081
+    providers:
+      google:
+        client-id: test-client-id
+        client-secret: test-client-secret
+        redirect-uri: /oauth2/callback/google
+        authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+        token-uri: https://oauth2.googleapis.com/token
+        user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+        scope:
+          - email
+          - profile
