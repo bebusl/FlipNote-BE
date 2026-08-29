@@ -1,0 +1,23 @@
+syntax = "proto3";
+package reaction;
+
+service ReactionService {
+  rpc IsLiked (IsReactedRequest) returns (IsReactedResponse);
+  rpc AreLiked (AreReactedRequest) returns (AreReactedResponse);
+  rpc IsBookmarked (IsReactedRequest) returns (IsReactedResponse);
+  rpc AreBookmarked (AreReactedRequest) returns (AreReactedResponse);
+}
+
+message IsReactedRequest {
+  string target_type = 1;
+  int64 target_id = 2;
+  int64 user_id = 3;
+}
+message IsReactedResponse { bool reacted = 1; }
+
+message AreReactedRequest {
+  string target_type = 1;
+  repeated int64 target_ids = 2;
+  int64 user_id = 3;
+}
+message AreReactedResponse { map<int64, bool> results = 1; }

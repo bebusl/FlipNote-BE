@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package cardset;
+
+service CardsetService {
+  rpc IsCardSetViewable (IsCardSetViewableRequest) returns (IsCardSetViewableResponse);
+  rpc GetCardSetsByIds (GetCardSetsByIdsRequest) returns (GetCardSetsByIdsResponse);
+}
+
+message IsCardSetViewableRequest {
+  int64 card_set_id = 1;
+  int64 user_id = 2;
+}
+
+message IsCardSetViewableResponse {
+  bool viewable = 1;
+}
+
+message GetCardSetsByIdsRequest {
+  repeated int64 card_set_ids = 1;
+  int64 user_id = 2;
+}
+
+message CardSetSummary {
+  int64 id = 1;
+  string name = 2;
+  int64 group_id = 3;
+  string visibility = 4;
+  string category = 5;
+  string hashtag = 6;
+  optional int64 image_ref_id = 7;
+  int64 card_count = 8;
+}
+
+message GetCardSetsByIdsResponse {
+  repeated CardSetSummary card_sets = 1;
+}
