@@ -1,8 +1,8 @@
 helm:
   parameters:
   - name: image.repository
-    value: ghcr.io/dungbik/flipnote-cardset
+    value: ghcr.io/bebusl/flipnote-cardset
     forcestring: true
   - name: image.tag
-    value: main@sha256:be800f79ba23be879c5e6d4182c76562672af2db0affdcaee07a84482c2b85bf
+    value: main
     forcestring: true

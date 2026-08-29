@@ -1,12 +1,16 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/dungbik/flipnote-group
+  repository: ghcr.io/bebusl/flipnote-group
   pullPolicy: IfNotPresent
   tag: ""
 
 nameOverride: ""
 fullnameOverride: ""
+
+existingSecret: "group-service-secret"
+
+imagePullSecrets: []
 
 service:
   type: ClusterIP
@@ -48,7 +52,7 @@ secret:
   data: {}
 
 externalSecret:
-  enabled: true
+  enabled: false
   refreshInterval: "1h"
   secretStoreName: "vault-backend"
   secretStoreKind: "ClusterSecretStore"
@@ -66,6 +70,12 @@ externalSecret:
       remoteProperty: GRPC_USER_URL
     - secretKey: RESEND_API_KEY
       remoteProperty: RESEND_API_KEY
+    - secretKey: RESEND_FROM_EMAIL
+      remoteProperty: RESEND_FROM_EMAIL
+    - secretKey: APP_CLIENT_URL
+      remoteProperty: APP_CLIENT_URL
+    - secretKey: SWAGGER_SERVER_URL
+      remoteProperty: SWAGGER_SERVER_URL
     - secretKey: RABBITMQ_HOST
       remoteProperty: RABBITMQ_HOST
     - secretKey: RABBITMQ_PORT

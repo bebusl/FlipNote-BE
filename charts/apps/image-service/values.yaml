@@ -1,12 +1,16 @@
 replicaCount: 1
 
 image:
-  repository: dungbik/flipnote-image
+  repository: ghcr.io/bebusl/flipnote-image
   pullPolicy: IfNotPresent
   tag: ""
 
 nameOverride: ""
 fullnameOverride: ""
+
+existingSecret: "image-service-secret"
+
+imagePullSecrets: []
 
 service:
   type: ClusterIP
@@ -32,7 +36,7 @@ secret:
   data: {}
 
 externalSecret:
-  enabled: true
+  enabled: false
   refreshInterval: "1h"
   secretStoreName: "vault-backend"
   secretStoreKind: "ClusterSecretStore"

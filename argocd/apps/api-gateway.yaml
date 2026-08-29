@@ -4,7 +4,7 @@ metadata:
   name: api-gateway
   namespace: argocd
   annotations:
-    argocd-image-updater.argoproj.io/image-list: "app=ghcr.io/dungbik/flipnote-api-gateway:main"
+    argocd-image-updater.argoproj.io/image-list: "app=ghcr.io/bebusl/flipnote-api-gateway:main"
     argocd-image-updater.argoproj.io/app.helm.image-name: "image.repository"
     argocd-image-updater.argoproj.io/app.helm.image-tag: "image.tag"
     argocd-image-updater.argoproj.io/app.update-strategy: "digest"
@@ -12,7 +12,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/FlipNoteTeam/FlipNote-Infra.git
+    repoURL: https://github.com/bebusl/FlipNote-Infra.git
     targetRevision: main
     path: charts/apps/api-gateway
     helm:

@@ -1,12 +1,16 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/dungbik/flipnote-api-gateway
+  repository: ghcr.io/bebusl/flipnote-api-gateway
   pullPolicy: IfNotPresent
   tag: ""
 
 nameOverride: ""
 fullnameOverride: ""
+
+existingSecret: "api-gateway-secret"
+
+imagePullSecrets: []
 
 service:
   type: ClusterIP

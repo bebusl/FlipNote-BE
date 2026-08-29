@@ -14,8 +14,10 @@ spec:
       labels:
         {{- include "image-service.selectorLabels" . | nindent 8 }}
     spec:
+      {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
-        - name: dockerhub-secret
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -45,8 +47,8 @@ spec:
           env:
             {{- toYaml .Values.env | nindent 12 }}
           {{- end }}
-          {{- if .Values.externalSecret.enabled }}
+          {{- if or .Values.externalSecret.enabled .Values.existingSecret }}
           envFrom:
             - secretRef:
-                name: {{ include "image-service.fullname" . }}-secret
+                name: {{ .Values.existingSecret | default (printf "%s-secret" .Release.Name) }}
           {{- end }}

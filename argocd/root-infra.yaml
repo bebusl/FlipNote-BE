@@ -8,7 +8,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/FlipNoteTeam/FlipNote-Infra.git
+    repoURL: https://github.com/bebusl/FlipNote-Infra.git
     targetRevision: main
     path: argocd/infra
   destination:

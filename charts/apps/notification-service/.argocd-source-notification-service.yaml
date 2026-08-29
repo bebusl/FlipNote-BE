@@ -1,8 +1,8 @@
 helm:
   parameters:
   - name: image.repository
-    value: ghcr.io/dungbik/flipnote-notification
+    value: ghcr.io/bebusl/flipnote-notification
     forcestring: true
   - name: image.tag
-    value: main@sha256:56fc615d5730f99b78ef83487cf340cb3f815962fb65ca16080cf876a3ec31b6
+    value: main
     forcestring: true

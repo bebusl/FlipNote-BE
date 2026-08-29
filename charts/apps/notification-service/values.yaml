@@ -1,12 +1,16 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/dungbik/flipnote-notification
+  repository: ghcr.io/bebusl/flipnote-notification
   pullPolicy: IfNotPresent
   tag: ""
 
 nameOverride: ""
 fullnameOverride: ""
+
+existingSecret: "notification-service-secret"
+
+imagePullSecrets: []
 
 service:
   type: ClusterIP
@@ -31,7 +35,7 @@ secret:
   data: {}
 
 externalSecret:
-  enabled: true
+  enabled: false
   refreshInterval: "1h"
   secretStoreName: "vault-backend"
   secretStoreKind: "ClusterSecretStore"

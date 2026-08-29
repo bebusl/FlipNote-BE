@@ -1,8 +1,8 @@
 helm:
   parameters:
   - name: image.repository
-    value: ghcr.io/dungbik/flipnote-api-gateway
+    value: ghcr.io/bebusl/flipnote-api-gateway
     forcestring: true
   - name: image.tag
-    value: main@sha256:ada3472e560faaab4caf49f272fec2a3fac5b24160ff459d45d7be1ea89aec42
+    value: main
     forcestring: true

@@ -1,12 +1,16 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/dungbik/flipnote-user
+  repository: ghcr.io/bebusl/flipnote-user
   pullPolicy: IfNotPresent
   tag: ""
 
 nameOverride: ""
 fullnameOverride: ""
+
+existingSecret: "user-service-secret"
+
+imagePullSecrets: []
 
 service:
   type: ClusterIP
@@ -32,7 +36,7 @@ secret:
   data: {}
 
 externalSecret:
-  enabled: true
+  enabled: false
   refreshInterval: "1h"
   secretStoreName: "vault-backend"
   secretStoreKind: "ClusterSecretStore"
@@ -60,3 +64,11 @@ externalSecret:
       remoteProperty: JWT_SECRET
     - secretKey: APP_RESEND_API_KEY
       remoteProperty: APP_RESEND_API_KEY
+    - secretKey: RESEND_FROM_EMAIL
+      remoteProperty: RESEND_FROM_EMAIL
+    - secretKey: DDL_AUTO
+      remoteProperty: DDL_AUTO
+    - secretKey: OAUTH_BASE_URL
+      remoteProperty: OAUTH_BASE_URL
+    - secretKey: SWAGGER_SERVER_URL
+      remoteProperty: SWAGGER_SERVER_URL
