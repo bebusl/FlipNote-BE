@@ -1,0 +1,67 @@
+name: CI cardset-service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'FlipNote-Cardset/**'
+      - '.github/workflows/ci-cardset.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'FlipNote-Cardset/**'
+      - '.github/workflows/ci-cardset.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./FlipNote-Cardset
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      mysql:
+        image: mysql:8
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: flipnote
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      DB_DATABASE: flipnote
+      DB_SYNCHRONIZE: 'true'
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: FlipNote-Cardset/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm run lint
+      - run: npm test
+      - run: npm run test:e2e
+      - run: npm run test:cov

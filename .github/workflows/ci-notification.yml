@@ -1,0 +1,33 @@
+name: CI notification-service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'FlipNote-Notification/**'
+      - '.github/workflows/ci-notification.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'FlipNote-Notification/**'
+      - '.github/workflows/ci-notification.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./FlipNote-Notification
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x gradlew
+      - run: ./gradlew build -x test
+      - run: ./gradlew test
