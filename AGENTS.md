@@ -271,3 +271,25 @@ gRPC 서비스 메서드와 메시지 타입은 `.proto` 파일이 소스 오브
 | Vault 설정 | `FlipNote-Infra/argocd/infra/vault-config.yaml` |
 | CI 워크플로 | `각 서비스/.github/workflows/ci.yml` |
 | CD 워크플로 | `각 서비스/.github/workflows/cd.yml` |
+
+---
+
+## 커밋 메시지 규칙
+
+모노레포 변경사항은 영향을 받은 서비스 또는 공통 영역을 scope로 명시하고, 다음 형식을 사용한다.
+
+```
+<type>(<scope>): <imperative summary>
+```
+
+- `type`: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`
+- `scope`: `user`, `gateway`, `cardset`, `group`, `image`, `reaction`, `notification`, `infra`, `docs`, `repo` 중 하나를 사용한다.
+- 서로 독립적으로 배포·검증 가능한 서비스 변경은 하나의 커밋에 섞지 않는다.
+- 공통 Docker Compose 또는 문서는 해당 변경을 주도하는 서비스 커밋에 포함한다.
+
+예시:
+
+```
+feat(user): add local console email delivery
+fix(gateway): route cardset websocket traffic
+```
