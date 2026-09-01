@@ -51,6 +51,8 @@ services:
     platform: linux/amd64    # GHCR 이미지가 amd64 전용 → Apple Silicon에서는 Rosetta 에뮬레이션
     environment:
       OAUTH_BASE_URL: http://localhost:8080    # 기본값이 운영 도메인이라 로컬 OAuth 콜백용으로 덮어씀
+      COOKIE_SECURE: "false"                  # HTTP localhost에서 OAuth/JWT 쿠키 허용
+      MAIL_MODE: console                       # 인증코드/재설정 링크를 User 서비스 로그에 출력
       DB_URL: jdbc:mysql://mysql:3306/flipnote_user
       DB_USERNAME: root
       DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-flipnote_local}

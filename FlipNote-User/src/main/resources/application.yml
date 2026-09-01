@@ -64,6 +64,10 @@ jwt:
   refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
 
 app:
+  cookie:
+    secure: ${COOKIE_SECURE:true}
+  mail:
+    mode: ${MAIL_MODE:resend}
   resend:
     api-key: ${APP_RESEND_API_KEY}
     from-email: ${RESEND_FROM_EMAIL:FlipNote <no-reply@localhost>}

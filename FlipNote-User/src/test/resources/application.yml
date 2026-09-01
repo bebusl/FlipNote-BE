@@ -31,6 +31,10 @@ jwt:
   refresh-token-expiration: 604800000
 
 app:
+  cookie:
+    secure: false
+  mail:
+    mode: console
   resend:
     api-key: test-api-key
     from-email: test@test.com

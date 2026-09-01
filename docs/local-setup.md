@@ -118,7 +118,14 @@ Gateway의 `AuthenticationFilter`가 이걸 읽어 user-service에 검증을 요
 회원가입 전에 이메일 인증이 필요한데, FlipNote는 **SMTP가 아니라 Resend HTTP API**로 메일을 보냅니다.
 따라서 **MailHog 같은 SMTP 인터셉터로는 가로챌 수 없습니다.**
 
-대신 인증 코드가 Redis에 저장되므로 거기서 직접 읽으면 됩니다. 헬퍼 스크립트를 쓰세요:
+기본 Docker Compose 설정은 `MAIL_MODE=console`이라 인증 코드를 실제로 발송하지 않고 User 서비스 로그에 표시합니다. Docker Desktop에서 `user-service` 로그를 열거나 아래 명령으로 확인하세요:
+
+```bash
+docker compose logs -f user-service
+# [DEV EMAIL] Verification code for test@flipnote.test: 123456 (valid for 10 minutes)
+```
+
+인증 코드는 Redis에도 저장됩니다. 자동화가 필요하면 헬퍼 스크립트를 쓸 수 있습니다:
 
 ```bash
 ./scripts/verify-email.sh test@flipnote.test

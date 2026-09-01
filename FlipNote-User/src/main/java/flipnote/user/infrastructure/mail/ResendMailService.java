@@ -7,6 +7,7 @@ import flipnote.user.domain.common.EmailSendException;
 import flipnote.user.infrastructure.mail.ResendProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
@@ -14,6 +15,7 @@ import org.thymeleaf.spring6.SpringTemplateEngine;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "app.mail.mode", havingValue = "resend", matchIfMissing = true)
 public class ResendMailService implements MailService {
 
     private final ResendProperties resendProperties;

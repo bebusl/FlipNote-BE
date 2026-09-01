@@ -5,6 +5,7 @@ import flipnote.user.domain.AuthErrorCode;
 import flipnote.user.domain.TokenPair;
 import flipnote.user.domain.common.BizException;
 import flipnote.user.infrastructure.config.ClientProperties;
+import flipnote.user.infrastructure.config.CookieProperties;
 import flipnote.user.infrastructure.jwt.JwtProvider;
 import flipnote.user.interfaces.http.common.CookieUtil;
 import flipnote.user.interfaces.http.common.HttpConstants;
@@ -28,6 +29,7 @@ public class OAuthController {
     private final OAuthService oAuthService;
     private final JwtProvider jwtProvider;
     private final ClientProperties clientProperties;
+    private final CookieProperties cookieProperties;
 
     private static final int VERIFIER_COOKIE_MAX_AGE = 180;
 
@@ -39,7 +41,7 @@ public class OAuthController {
 
         ResponseCookie verifierCookie = ResponseCookie.from(HttpConstants.OAUTH_VERIFIER_COOKIE, redirect.codeVerifier())
                 .httpOnly(true)
-                .secure(true)
+                .secure(cookieProperties.isSecure())
                 .path("/")
                 .maxAge(VERIFIER_COOKIE_MAX_AGE)
                 .sameSite("Lax")
@@ -59,7 +61,7 @@ public class OAuthController {
             @CookieValue(HttpConstants.OAUTH_VERIFIER_COOKIE) String codeVerifier,
             HttpServletResponse response) {
 
-        CookieUtil.deleteCookie(response, HttpConstants.OAUTH_VERIFIER_COOKIE);
+        CookieUtil.deleteCookie(response, HttpConstants.OAUTH_VERIFIER_COOKIE, cookieProperties.isSecure());
 
         boolean isSocialLinkRequest = StringUtils.hasText(state);
         if (isSocialLinkRequest) {
@@ -73,9 +75,9 @@ public class OAuthController {
         try {
             TokenPair tokenPair = oAuthService.socialLogin(provider, code, codeVerifier);
             CookieUtil.addCookie(response, HttpConstants.ACCESS_TOKEN_COOKIE, tokenPair.accessToken(),
-                    jwtProvider.getAccessTokenExpiration() / 1000);
+                    jwtProvider.getAccessTokenExpiration() / 1000, cookieProperties.isSecure());
             CookieUtil.addCookie(response, HttpConstants.REFRESH_TOKEN_COOKIE, tokenPair.refreshToken(),
-                    jwtProvider.getRefreshTokenExpiration() / 1000);
+                    jwtProvider.getRefreshTokenExpiration() / 1000, cookieProperties.isSecure());
             return ResponseEntity.status(HttpStatus.FOUND)
                     .location(URI.create(clientProperties.getUrl() + clientProperties.getPaths().getSocialLoginSuccess()))
                     .build();

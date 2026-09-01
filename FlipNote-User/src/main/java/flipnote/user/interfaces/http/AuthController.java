@@ -6,6 +6,7 @@ import flipnote.user.application.result.TokenValidateResult;
 import flipnote.user.application.result.UserRegisterResult;
 import flipnote.user.domain.TokenPair;
 import flipnote.user.infrastructure.jwt.JwtProvider;
+import flipnote.user.infrastructure.config.CookieProperties;
 import flipnote.user.interfaces.http.common.CookieUtil;
 import flipnote.user.interfaces.http.common.HttpConstants;
 import flipnote.user.interfaces.http.dto.request.ChangePasswordRequest;
@@ -39,6 +40,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final JwtProvider jwtProvider;
+    private final CookieProperties cookieProperties;
 
     @PostMapping("/register")
     public ResponseEntity<UserRegisterResult> register(@Valid @RequestBody SignupRequest request) {
@@ -61,8 +63,8 @@ public class AuthController {
             HttpServletResponse response
     ) {
         authService.logout(refreshToken);
-        CookieUtil.deleteCookie(response, HttpConstants.ACCESS_TOKEN_COOKIE);
-        CookieUtil.deleteCookie(response, HttpConstants.REFRESH_TOKEN_COOKIE);
+        CookieUtil.deleteCookie(response, HttpConstants.ACCESS_TOKEN_COOKIE, cookieProperties.isSecure());
+        CookieUtil.deleteCookie(response, HttpConstants.REFRESH_TOKEN_COOKIE, cookieProperties.isSecure());
         return ResponseEntity.ok().build();
     }
 
@@ -88,8 +90,8 @@ public class AuthController {
             HttpServletResponse response
     ) {
         authService.changePassword(userId, request.toCommand());
-        CookieUtil.deleteCookie(response, HttpConstants.ACCESS_TOKEN_COOKIE);
-        CookieUtil.deleteCookie(response, HttpConstants.REFRESH_TOKEN_COOKIE);
+        CookieUtil.deleteCookie(response, HttpConstants.ACCESS_TOKEN_COOKIE, cookieProperties.isSecure());
+        CookieUtil.deleteCookie(response, HttpConstants.REFRESH_TOKEN_COOKIE, cookieProperties.isSecure());
         return ResponseEntity.noContent().build();
     }
 
@@ -117,8 +119,8 @@ public class AuthController {
             HttpServletResponse response
     ) {
         authService.resetPassword(request.getToken(), request.getPassword());
-        CookieUtil.deleteCookie(response, HttpConstants.ACCESS_TOKEN_COOKIE);
-        CookieUtil.deleteCookie(response, HttpConstants.REFRESH_TOKEN_COOKIE);
+        CookieUtil.deleteCookie(response, HttpConstants.ACCESS_TOKEN_COOKIE, cookieProperties.isSecure());
+        CookieUtil.deleteCookie(response, HttpConstants.REFRESH_TOKEN_COOKIE, cookieProperties.isSecure());
         return ResponseEntity.noContent().build();
     }
 
@@ -139,8 +141,8 @@ public class AuthController {
 
     private void setTokenCookies(HttpServletResponse response, TokenPair tokenPair) {
         CookieUtil.addCookie(response, HttpConstants.ACCESS_TOKEN_COOKIE, tokenPair.accessToken(),
-                jwtProvider.getAccessTokenExpiration() / 1000);
+                jwtProvider.getAccessTokenExpiration() / 1000, cookieProperties.isSecure());
         CookieUtil.addCookie(response, HttpConstants.REFRESH_TOKEN_COOKIE, tokenPair.refreshToken(),
-                jwtProvider.getRefreshTokenExpiration() / 1000);
+                jwtProvider.getRefreshTokenExpiration() / 1000, cookieProperties.isSecure());
     }
 }
