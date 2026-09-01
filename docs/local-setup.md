@@ -13,10 +13,8 @@ FlipNote 백엔드 7개 서비스 + 인프라(MySQL/Redis/RabbitMQ)를 로컬에
 |---|---|
 | Docker Desktop | 실행 중이어야 함 |
 | 메모리 할당 | **12GB 이상 권장** (Settings → Resources) |
-| Rosetta | Apple Silicon이면 Settings → General에서 "Use Rosetta for x86_64/amd64 emulation" 활성화 |
 
-GHCR 이미지가 `linux/amd64` 전용이라 Apple Silicon에서는 에뮬레이션으로 돕니다.
-Rosetta 대신 QEMU로 떨어지면 JVM이 극단적으로 느려지거나 죽습니다.
+모든 애플리케이션 서비스는 로컬 소스와 Dockerfile로 빌드하므로, Apple Silicon에서는 네이티브 아키텍처 이미지로 실행됩니다.
 
 ---
 
@@ -63,7 +61,7 @@ print(json.dumps(sa,separators=(',',':')))"
 
 ```bash
 # 전체 기동
-docker compose up -d
+docker compose up -d --build
 
 # 인프라만 먼저 (문제 격리할 때 유용)
 docker compose up -d mysql redis rabbitmq
@@ -189,14 +187,15 @@ curl -s "http://localhost:8080/v1/card-sets?page=1&size=10" -H "Cookie: accessTo
 
 ## 8. 트러블슈팅
 
-### `error from registry: denied`
+### 변경한 소스가 컨테이너에 반영되지 않음
 
-`flipnote-image` 패키지만 GHCR에서 **비공개**입니다. 나머지 6개는 익명으로 받아집니다.
-compose가 병렬로 pull 하다가 이거 하나 때문에 전부 `Interrupted` 되는 걸로 보이기 쉬우니 주의하세요.
+Compose의 모든 애플리케이션 서비스는 GHCR 이미지를 pull하지 않고 현재 작업 트리에서 빌드합니다. 소스를 수정한 뒤에는 다음 명령으로 재빌드·재생성하세요.
 
-현재 compose는 image-service를 **로컬 소스에서 직접 빌드**하도록 설정돼 있습니다(`build:` 블록).
-GHCR 접근 권한이 생기면 `build:` 블록을 지우고 `image: ghcr.io/dungbik/flipnote-image:main` +
-`platform: linux/amd64`로 되돌리면 됩니다.
+```bash
+docker compose up -d --build
+```
+
+`pull_policy: build`가 설정되어 있어 GHCR의 같은 이름·태그 이미지를 사용하지 않습니다. Docker 빌드 캐시는 유지되며, 변경된 소스가 있는 빌드 단계만 다시 실행됩니다.
 
 ### notification-service가 계속 재시작함
 
@@ -210,7 +209,7 @@ cardset-service는 Gateway를 거치지 않고 **자체적으로 JWT를 검증**
 ### MySQL 데이터를 초기화하고 싶을 때
 
 ```bash
-docker compose down -v && docker compose up -d
+docker compose down -v && docker compose up -d --build
 ```
 
 `docker/mysql/init.sql`이 서비스별 DB 6개를 다시 만들고, 각 서비스가 테이블을 자동 생성합니다

@@ -47,8 +47,11 @@ services:
   # =========================================================
 
   user-service:
-    image: ghcr.io/${GHCR_NAMESPACE:-dungbik}/flipnote-user:main
-    platform: linux/amd64    # GHCR 이미지가 amd64 전용 → Apple Silicon에서는 Rosetta 에뮬레이션
+    image: flipnote-user:local
+    pull_policy: build
+    build:
+      context: ./FlipNote-User
+      dockerfile: Dockerfile
     environment:
       OAUTH_BASE_URL: http://localhost:8080    # 기본값이 운영 도메인이라 로컬 OAuth 콜백용으로 덮어씀
       COOKIE_SECURE: "false"                  # HTTP localhost에서 OAuth/JWT 쿠키 허용
@@ -72,9 +75,8 @@ services:
         condition: service_healthy
 
   image-service:
-    # GHCR의 flipnote-image 패키지만 비공개(403)라 익명 pull 불가 → 로컬 소스에서 직접 빌드.
-    # GHCR 접근 권한이 생기면 build 블록을 지우고 platform: linux/amd64 를 되살리면 됨.
     image: flipnote-image:local
+    pull_policy: build
     build:
       context: ./FlipNote-Image
       dockerfile: Dockerfile
@@ -96,8 +98,11 @@ services:
         condition: service_healthy
 
   reaction-service:
-    image: ghcr.io/${GHCR_NAMESPACE:-dungbik}/flipnote-reaction:main
-    platform: linux/amd64
+    image: flipnote-reaction:local
+    pull_policy: build
+    build:
+      context: ./FlipNote-Reaction
+      dockerfile: Dockerfile
     environment:
       DB_URL: jdbc:mysql://mysql:3306/flipnote_reaction
       DB_USERNAME: root
@@ -114,8 +119,11 @@ services:
         condition: service_healthy
 
   group-service:
-    image: ghcr.io/${GHCR_NAMESPACE:-dungbik}/flipnote-group:main
-    platform: linux/amd64
+    image: flipnote-group:local
+    pull_policy: build
+    build:
+      context: ./FlipNote-Group
+      dockerfile: Dockerfile
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/flipnote_group
       SPRING_DATASOURCE_USERNAME: root
@@ -136,8 +144,11 @@ services:
         condition: service_healthy
 
   cardset-service:
-    image: ghcr.io/${GHCR_NAMESPACE:-dungbik}/flipnote-cardset:main
-    platform: linux/amd64
+    image: flipnote-cardset:local
+    pull_policy: build
+    build:
+      context: ./FlipNote-Cardset
+      dockerfile: Dockerfile
     environment:
       NODE_ENV: production
       PORT: 8085
@@ -170,8 +181,11 @@ services:
         condition: service_healthy
 
   notification-service:
-    image: ghcr.io/${GHCR_NAMESPACE:-dungbik}/flipnote-notification:main
-    platform: linux/amd64
+    image: flipnote-notification:local
+    pull_policy: build
+    build:
+      context: ./FlipNote-Notification
+      dockerfile: Dockerfile
     environment:
       DB_URL: jdbc:mysql://mysql:3306/flipnote_notification
       DB_USERNAME: root
@@ -190,8 +204,11 @@ services:
         condition: service_healthy
 
   api-gateway:
-    image: ghcr.io/${GHCR_NAMESPACE:-dungbik}/flipnote-api-gateway:main
-    platform: linux/amd64
+    image: flipnote-api-gateway:local
+    pull_policy: build
+    build:
+      context: ./FlipNote-Gateway
+      dockerfile: Dockerfile
     ports:
       - "8080:8080"    # 모든 API 요청은 여기로
     depends_on:

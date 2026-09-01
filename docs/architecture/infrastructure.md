@@ -43,7 +43,7 @@ GitHub (소스 코드 저장소)
             │
             ▼
        GHCR (이미지 저장소)
-       ghcr.io/dungbik/flipnote-{서비스}:main
+       ghcr.io/bebusl/flipnote-{서비스}:main
             │
             │  새 이미지 감지 (ArgoCD Image Updater)
             ▼
@@ -95,7 +95,7 @@ main push / PR open
     Docker Hub랑 똑같은 개념인데, GitHub 안에 붙어있는 버전이라고 보면 돼요.
 
     Docker Hub:  docker.io/myapp:latest
-    GHCR:       ghcr.io/dungbik/flipnote-user:main
+    GHCR:       ghcr.io/bebusl/flipnote-user:main
 
     FlipNote는 각 서비스의 Docker 이미지를 GHCR에 올려두고, ArgoCD가 거기서
     이미지를 가져와서 쿠버네티스에 배포하는 구조예요.
@@ -113,8 +113,8 @@ main push
        - Java 서비스: gradle bootJar → eclipse-temurin:21-jre 위에서 실행
        - Cardset: npm build → node:22-alpine 위에서 실행
   ③ GHCR에 이미지 Push
-       ghcr.io/dungbik/flipnote-user:main  ← 태그가 브랜치 이름
-       ghcr.io/dungbik/flipnote-group:main
+       ghcr.io/bebusl/flipnote-user:main  ← 태그가 브랜치 이름
+       ghcr.io/bebusl/flipnote-group:main
        ... (서비스마다 각자 레포에 CD 워크플로 있음)
   │
   [여기서 GitHub Actions 역할 끝]
@@ -453,7 +453,7 @@ gRPC:   cardset-service:9095
 | --------------------- | ---------------------------- |
 | Vault (시크릿 저장소) | `vault.flipnote.site:8200`   |
 | 프론트엔드            | `flipnote.site`              |
-| GHCR (이미지 저장소)  | `ghcr.io/dungbik/flipnote-*` |
+| GHCR (이미지 저장소)  | `ghcr.io/bebusl/flipnote-*` |
 
 ---
 

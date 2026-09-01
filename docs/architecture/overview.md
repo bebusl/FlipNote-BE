@@ -121,7 +121,7 @@ Public 경로(`/v1/auth/login`, `/v1/auth/register` 등)는 `AuthenticationFilte
   ▼
 GitHub Actions (CI)
   ├── 빌드 & 테스트
-  └── Docker 이미지 빌드 → GHCR (ghcr.io/dungbik/flipnote-{service})
+  └── Docker 이미지 빌드 → GHCR (ghcr.io/bebusl/flipnote-{service})
                                         │
                                         ▼
                               ArgoCD (GitOps)
@@ -137,7 +137,7 @@ GitHub Actions (CI)
 
 | 항목 | 내용 |
 |---|---|
-| 컨테이너 레지스트리 | GHCR (`ghcr.io/dungbik/flipnote-*`) |
+| 컨테이너 레지스트리 | GHCR (`ghcr.io/bebusl/flipnote-*`) |
 | 패키지 매니저 | Helm |
 | CD 도구 | ArgoCD (자동 동기화 + self-heal) |
 | 시크릿 관리 | HashiCorp Vault + External Secrets Operator |
