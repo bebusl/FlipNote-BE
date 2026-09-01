@@ -27,7 +27,8 @@ spring:
                   - /v1/auth/email-verification
                   - /v1/auth/password-reset/request
                   - /v1/auth/password-reset
-                  - /v1/oauth2/callback/*
+                  - /oauth2/callback/*
+                  - /oauth2/authorization/*
 
         - id: auth-private
           uri: http://localhost:8081
@@ -39,7 +40,6 @@ spring:
                   - /v1/auth/password
                   - /v1/auth/social-links
                   - /v1/auth/social-links/*
-                  - /v1/oauth2/authorization/*
                   - /v1/oauth2/links/*
 
           filters:
@@ -102,6 +102,27 @@ spring:
                   - /groups/swagger-ui/**
                   - /groups/v3/api-docs
                   - /groups/v3/api-docs/**
+
+        - id: cardset-private
+          uri: http://localhost:8085
+          predicates:
+            - name: Path
+              args:
+                patterns:
+                  - /v1/card-sets
+                  - /v1/card-sets/**
+                  - /v1/cards
+                  - /v1/cards/**
+          filters:
+            - AuthenticationFilter
+
+        - id: cardset-websocket
+          order: -1
+          uri: ws://localhost:8085
+          predicates:
+            - Path=/v1/card-sets/ws/**
+          filters:
+            - AuthenticationFilter
 
 app:
   user-service:
