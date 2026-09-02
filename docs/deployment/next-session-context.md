@@ -1,5 +1,8 @@
 # Next-session deployment context
 
+> **대체됨:** 현재 작업 컨텍스트는 [`docs/agent-context.md`](../agent-context.md)를 따른다.
+> 이 문서는 과거 배포 메모이며, 현재 로컬 Compose·루트 워크플로·CI 설정과 다를 수 있다.
+
 Last updated: 2026-08-29
 
 ## Repository state

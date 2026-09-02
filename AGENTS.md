@@ -4,6 +4,12 @@
 
 FlipNote는 실시간 협업이 가능한 플래시카드 서비스다. 백엔드는 7개의 독립 마이크로서비스와 API Gateway로 구성된 MSA 구조다.
 
+## 작업 컨텍스트
+
+로컬 실행, CI/CD, 배포, ChangeLog 및 진행 중인 이슈에 관한 최신 작업 규칙은
+[`docs/agent-context.md`](docs/agent-context.md)를 **작업 전에 먼저 읽는다**.
+이 문서는 서비스 구조 설명을 중복하지 않고, 다음 세션에서 필요한 운영 맥락만 유지한다.
+
 ### 서비스 목록
 
 | 서비스 | HTTP 포트 | gRPC 포트 | 기술 스택 | 역할 |
@@ -269,8 +275,8 @@ gRPC 서비스 메서드와 메시지 타입은 `.proto` 파일이 소스 오브
 | Kubernetes Helm values | `FlipNote-Infra/charts/apps/{service}/values.yaml` |
 | 외부 시크릿 설정 | `FlipNote-Infra/argocd/infra/external-secrets.yaml` |
 | Vault 설정 | `FlipNote-Infra/argocd/infra/vault-config.yaml` |
-| CI 워크플로 | `각 서비스/.github/workflows/ci.yml` |
-| CD 워크플로 | `각 서비스/.github/workflows/cd.yml` |
+| CI 워크플로 | `.github/workflows/ci-*.yml` |
+| CD 워크플로 | `.github/workflows/cd-*.yml` |
 
 ---
 
