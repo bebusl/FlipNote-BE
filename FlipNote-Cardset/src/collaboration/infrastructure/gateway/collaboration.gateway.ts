@@ -177,15 +177,21 @@ export class CollaborationGateway
 
   @SubscribeMessage('awareness')
   handleAwareness(
-    client: Socket,
-    payload: { cardsetId: string; awareness: number[] },
+    @WsUser() user: UserAuth,
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { cardsetId: string; awareness: number[] },
   ) {
     const { cardsetId, awareness } = payload;
     this.logger.log(
-      `[awareness 브로드캐스트] cardsetId=${cardsetId}, clientId=${client.id}, awarenessSize=${awareness.length}`,
+      `[awareness 브로드캐스트] cardsetId=${cardsetId}, userId=${user.userId}, clientId=${client.id}, awarenessSize=${awareness.length}`,
     );
     client.to(`cardset:${cardsetId}`).emit('awareness', {
-      data: { cardsetId, awareness: new Uint8Array(awareness) },
+      data: {
+        cardsetId,
+        awareness: new Uint8Array(awareness),
+        userId: user.userId,
+        userName: user.nickname,
+      },
     });
   }
 
