@@ -26,7 +26,7 @@
 - Group은 로컬 JDK 21에 Java 17 `--release`를 적용해 검증했으며 저장소의 Java 17 toolchain 설정은 유지한다.
 - 실제 브라우저와 전체 서비스를 연결한 편집 E2E 테스트는 수행하지 않았다.
 
-## 구현 커밋
+## 최초 게시 시점의 구현 커밋 (main 통합 rebase 전)
 
 - `a90843f` — `feat(group): publish member kick events after commit`
 - `4fc36cd` — `feat(cardset): revoke active editor sessions safely`

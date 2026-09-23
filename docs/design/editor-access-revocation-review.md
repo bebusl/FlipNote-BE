@@ -23,7 +23,7 @@ Gateway의 `order: -1` 삭제는 원본 stash대로 유지한다. 기존 ChangeL
 ## 검증
 
 - 수정 전 재현 스크립트: 일반 강퇴 후 편집 차단 1개 통과, 입장·버퍼·재전달·Redis 인덱스 누락 4개 실패. 수정 후 5개 모두 통과.
-- Cardset: Jest 24개, Nest 빌드, TypeScript 검사, 변경한 TypeScript 파일 ESLint 통과.
+- Cardset: main 통합 후 Jest 25개, Nest 빌드, TypeScript 검사, 변경한 TypeScript 파일 ESLint 통과.
 - Group: 대상 userId 사용, 다른 그룹 멤버십 거부, 권한 거부, 삭제 실패 시 미발행, 커밋 이후 발행·롤백 시 미발행을 검증한다. 기존 컨텍스트 로딩 테스트를 포함한 전체 6개 통과.
 - Group은 설치된 JDK 21에 임시 Gradle init script로 Java 17 `--release`를 지정해 검증했다. 저장소의 Java 17 toolchain 설정은 유지한다. JUnit Platform 활성화와 기존 테스트의 누락된 테스트 전용 설정도 보완했다.
 - Gateway: 기본 라우팅 설정을 읽어 polling의 HTTP 유지와 Upgrade의 WebSocket 전환을 실제 WebsocketRoutingFilter로 검증했다. 기존 컨텍스트 테스트 포함 3개 통과.
@@ -35,4 +35,4 @@ Gateway의 `order: -1` 삭제는 원본 stash대로 유지한다. 기존 ChangeL
 - DB 커밋과 MQ 발행 사이 이벤트 유실을 복구하는 outbox는 구현하지 않았다. 메시지가 정상 전달·소비된 시점에 활성 편집 세션을 철회한다. 그룹 강퇴 API의 204가 모든 소켓의 퇴장 완료를 보장하지 않는다.
 - 이미 시작된 Redis 저장은 취소·롤백하지 않는다. 강퇴 시 대기 중인 버퍼, 진행 중인 입장의 후속 처리, 이후 편집 요청을 차단한다.
 - 프론트엔드는 `kicked` 수신 시 해당 카드셋의 편집 UI와 Yjs provider를 정리해야 한다. 다른 카드셋용 Socket.IO 연결은 유지한다.
-- 원래 작업 폴더의 스냅샷 실습 코드·문서와 원본 stash는 보존한다. 이 브랜치는 stash 기준점에서 분리했으므로 이후 awareness 사용자 정보 커밋(`11ab4dc`)은 병합 시 함께 확인한다.
+- 원래 작업 폴더의 스냅샷 실습 코드·문서와 원본 stash는 보존한다. stash 기준점에서 분리했던 브랜치를 main(`11ab4dc`) 위로 rebase했다. awareness 사용자 정보 전달과 강퇴 후 차단이 함께 유지되는지 회귀 테스트로 확인했다.

@@ -272,8 +272,8 @@ payload: { cardsetId: string, update: number[] }
 description: Full or incremental Yjs document state as a byte array. Sent after join-cardset and after each update.
 
 awareness
-payload: { data: { cardsetId: string, awareness: Uint8Array } }
-description: Forwarded awareness state from another client.
+payload: { data: { cardsetId: string, awareness: Uint8Array, userId: string, userName: string } }
+description: Forwarded awareness state with the authenticated sender's user ID and nickname.
 
 kicked
 payload: { cardsetId: string, reason: enum(MANAGER_REMOVED|GROUP_MEMBER_KICKED) }

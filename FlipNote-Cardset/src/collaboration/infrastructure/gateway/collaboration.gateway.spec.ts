@@ -74,12 +74,35 @@ describe('editor session revocation', () => {
       cardsetId: '42',
       update: [0, 0],
     });
-    f.gateway.handleAwareness(asSocket(f.client), {
+    f.gateway.handleAwareness(user, asSocket(f.client), {
       cardsetId: '42',
       awareness: [0],
     });
     expect(f.service.saveUpdate).not.toHaveBeenCalled();
     expect(f.client.to).not.toHaveBeenCalled();
+  });
+
+  it('preserves authenticated user information in awareness after joining', async () => {
+    const f = setup();
+    await f.gateway.handleJoinCardset(user, asSocket(f.client), {
+      cardsetId: '42',
+    });
+    f.gateway.handleAwareness(user, asSocket(f.client), {
+      cardsetId: '42',
+      awareness: [1, 2],
+    });
+    expect(f.client.to).toHaveBeenCalledWith('cardset:42');
+    const broadcast = f.client.to.mock.results[0].value as ReturnType<
+      typeof f.client.to
+    >;
+    expect(broadcast.emit).toHaveBeenCalledWith('awareness', {
+      data: {
+        cardsetId: '42',
+        awareness: new Uint8Array([1, 2]),
+        userId: user.userId,
+        userName: user.nickname,
+      },
+    });
   });
 
   it('does not admit a non-manager', async () => {
@@ -121,7 +144,7 @@ describe('editor session revocation', () => {
       cardsetId: '42',
       update: [0, 0],
     });
-    f.gateway.handleAwareness(asSocket(f.client), {
+    f.gateway.handleAwareness(user, asSocket(f.client), {
       cardsetId: '42',
       awareness: [0],
     });

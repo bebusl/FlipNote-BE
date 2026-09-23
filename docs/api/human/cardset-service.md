@@ -443,6 +443,16 @@ socket.emit('awareness', {
 });
 ```
 
+서버는 같은 방의 다른 사용자에게 `awareness` 이벤트를 보내며, `data`에 인증된 발신자 정보를 포함합니다.
+
+| 응답 필드 | 타입 | 설명 |
+|-----------|------|------|
+| data.cardsetId | string | 카드셋 ID |
+| data.awareness | Uint8Array | awareness 상태 |
+| data.userId | string | 인증된 발신자 ID |
+| data.userName | string | 인증된 발신자 닉네임 |
+
+
 ---
 
 ### 이벤트: sync (서버 → 클라이언트)
