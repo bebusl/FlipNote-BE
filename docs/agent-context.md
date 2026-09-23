@@ -9,6 +9,7 @@
 - stash의 편집 권한 철회 작업은 `feat/editor-access-revocation`에서 검토·수정했다. 스냅샷 실습 작업은 원래 작업 폴더에 보존한다.
 - 입장 중 강퇴, 버퍼 저장, 메시지 재전달, Redis 인덱스 누락을 회귀 테스트로 검증했다. [검토 기록](design/editor-access-revocation-review.md)에 변경 내용과 단일 인스턴스·메시지 전달 보장의 한계를 기록한다.
 - Gateway의 WebSocket `order: -1` 삭제는 기존 Socket.IO polling 장애 복구 변경이므로 유지한다.
+- Notion ChangeLog는 2026-09-23 사용자 승인 후 게시 완료했다. [게시 기록](design/editor-access-revocation-changelog.md)에 원고와 검증 결과를 보관한다.
 
 ## 로컬 실행
 
