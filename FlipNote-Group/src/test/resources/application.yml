@@ -1,4 +1,9 @@
 spring:
+  grpc:
+    server:
+      port: 0
+  rabbitmq:
+    dynamic: false
   datasource:
     url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
     driver-class-name: org.h2.Driver
@@ -27,3 +32,14 @@ cloud:
       access-key: dummy_access_key
       secret-key: dummy_secret_key
     bucket: dummy_bucket
+
+image:
+  default:
+    group: https://example.test/group.png
+
+app:
+  resend:
+    api-key: re_test_only
+    from-email: test@example.test
+  client:
+    url: http://localhost:3000

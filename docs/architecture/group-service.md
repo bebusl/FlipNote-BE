@@ -124,6 +124,9 @@ src/main/java/flipnote/group/
 | Exchange / Routing Key | 발행 조건 | 수신 서비스 |
 |----------------------|----------|------------|
 | 가입 신청 수락 메시지 | 가입 신청 수락 시 | Notification |
+| `editor-access.exchange` / `group.member.kicked` | 그룹 멤버 삭제 트랜잭션 커밋 후 | Cardset |
+
+`KickMemberService`는 멤버십이 요청한 그룹에 속하는지 확인하고, 멤버십 ID가 아닌 대상 `userId`로 `GroupMemberKickedEvent`를 발행한다. `GroupMemberKickedEventListener`는 `AFTER_COMMIT`에만 `EditorAccessMessageProducer`를 호출하므로 롤백 시 메시지를 보내지 않는다. DB와 RabbitMQ 사이의 장애 복구용 outbox는 아직 없다.
 
 ### 이메일 (Resend API)
 

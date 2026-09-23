@@ -14,10 +14,17 @@ public class RabbitMQConfig {
 	public static final String EXCHANGE = "flipnote.notification";
 	public static final String GROUP_INVITE_ROUTING_KEY = "notification.group.invite";
 	public static final String GROUP_JOIN_REQUEST_ROUTING_KEY = "notification.group.join-request";
+	public static final String EDITOR_ACCESS_EXCHANGE = "editor-access.exchange";
+	public static final String GROUP_MEMBER_KICKED_ROUTING_KEY = "group.member.kicked";
 
 	@Bean
 	public TopicExchange notificationExchange() {
 		return new TopicExchange(EXCHANGE, true, false);
+	}
+
+	@Bean
+	public TopicExchange editorAccessExchange() {
+		return new TopicExchange(EDITOR_ACCESS_EXCHANGE, true, false);
 	}
 
 	@Bean
