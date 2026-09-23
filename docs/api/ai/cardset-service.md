@@ -239,7 +239,7 @@ data.size: number
 ## WebSocket /v1/card-sets/ws
 
 **Auth:** Bearer JWT passed via handshake auth or Authorization header
-**Description:** Real-time collaborative editing using Socket.IO + Yjs CRDT. Caller must be a manager of the cardset to send updates.
+**Description:** Real-time collaborative editing using Socket.IO + Yjs CRDT. Updates and awareness require an active authorized editing session and room membership. Revocation cancels pending joins and queued edits.
 
 **Connection:**
 path: /v1/card-sets/ws
@@ -274,6 +274,10 @@ description: Full or incremental Yjs document state as a byte array. Sent after 
 awareness
 payload: { data: { cardsetId: string, awareness: Uint8Array } }
 description: Forwarded awareness state from another client.
+
+kicked
+payload: { cardsetId: string, reason: enum(MANAGER_REMOVED|GROUP_MEMBER_KICKED) }
+description: Editing access was revoked. All of the user's local sockets leave the affected room; the Socket.IO connection and other cardset sessions remain open. Stop that cardset's editor/provider. New joins require manager permission again.
 
 error
 payload: { message: string, details?: string }

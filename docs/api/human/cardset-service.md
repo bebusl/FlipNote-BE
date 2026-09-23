@@ -463,6 +463,26 @@ socket.on('sync', ({ cardsetId, update }) => {
 
 ---
 
+### 이벤트: kicked (서버 → 클라이언트)
+
+매니저 목록에서 제외되거나 그룹에서 강퇴되면 해당 사용자의 모든 탭·기기에 전송됩니다. 서버는 해당 카드셋의 편집 세션과 진행 중인 입장을 취소하고 대기 중인 편집 데이터를 버립니다. 이후 `update`와 `awareness`는 거부합니다. Socket.IO 연결과 다른 카드셋의 편집 세션은 유지됩니다.
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| cardsetId | string | 편집 권한이 철회된 카드셋 ID |
+| reason | string | `MANAGER_REMOVED` 또는 `GROUP_MEMBER_KICKED` |
+
+```json
+{
+  "cardsetId": "42",
+  "reason": "GROUP_MEMBER_KICKED"
+}
+```
+
+프론트엔드는 해당 카드셋의 편집 UI와 Yjs provider를 정리하고 접근 불가 안내를 표시합니다. 그룹에 다시 가입해도 매니저 권한은 자동 복구되지 않습니다. 이미 저장을 시작한 편집은 취소되지 않으므로 `kicked`를 과거 편집의 롤백으로 해석하지 않습니다.
+
+---
+
 ### 이벤트: error (서버 → 클라이언트)
 
 오류 발생 시 서버가 전송합니다.
@@ -475,7 +495,9 @@ socket.on('error', ({ message }) => {
 
 | 메시지 | 설명 |
 |--------|------|
-| 카드셋 편집 권한이 없습니다. | join-cardset 시 매니저 권한 없음 |
+| 카드셋 편집 권한이 없습니다. | 매니저 권한 없음, 미입장 또는 권한 철회 후 편집 시도 |
+| Invalid cardset ID | 양의 정수 형식의 카드셋 ID 필요 |
+| Failed to join cardset | 입장 처리 실패. 세션 정리 후 다시 입장 |
 | Update data is required | update 이벤트에 update 필드 누락 |
 | Sync failed | 서버 내부 동기화 오류 |
 

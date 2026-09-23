@@ -36,8 +36,14 @@ export class CardsetManagerRepositoryImpl implements ICardsetManagerRepository {
     return orm ? CardsetManagerMapper.toDomain(orm) : null;
   }
 
-  async findAllByCardSetId(cardSetId: number): Promise<CardsetManager[]> {
-    const orms = await this.ormRepository.find({ where: { cardSetId } });
+  async findAllByCardSetId(
+    cardSetId: number,
+    manager?: EntityManager,
+  ): Promise<CardsetManager[]> {
+    const repo = manager
+      ? manager.getRepository(CardsetManagerOrmEntity)
+      : this.ormRepository;
+    const orms = await repo.find({ where: { cardSetId } });
     return orms.map((orm) => CardsetManagerMapper.toDomain(orm));
   }
 
@@ -50,7 +56,10 @@ export class CardsetManagerRepositoryImpl implements ICardsetManagerRepository {
     return orms.map((orm) => CardsetManagerMapper.toDomain(orm));
   }
 
-  async delete(id: number): Promise<void> {
-    await this.ormRepository.delete(id);
+  async delete(id: number, manager?: EntityManager): Promise<void> {
+    const repo = manager
+      ? manager.getRepository(CardsetManagerOrmEntity)
+      : this.ormRepository;
+    await repo.delete(id);
   }
 }

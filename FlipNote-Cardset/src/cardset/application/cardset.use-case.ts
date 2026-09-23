@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { DataSource } from 'typeorm';
 import { BusinessException } from '../../shared/common/business.exception';
 import { ErrorCode } from '../../shared/common/error-code';
@@ -44,6 +45,7 @@ export class CardsetUseCase {
     @Inject(CARDSET_METADATA_REPOSITORY)
     private readonly metadataRepository: ICardSetMetadataRepository,
     private readonly collaborationUseCase: CollaborationUseCase,
+    private readonly amqpConnection: AmqpConnection,
   ) {}
 
   private async checkIsManager(
@@ -492,7 +494,8 @@ export class CardsetUseCase {
       await this.imageGrpcClient.changeImage(dto.imageRefId, id);
     }
 
-    return this.dataSource.transaction(async (manager) => {
+    let revokedManagerIds: number[] = [];
+    const updated = await this.dataSource.transaction(async (manager) => {
       if (dto.managerIds !== undefined) {
         const newManagerIds: number[] = dto.managerIds;
         for (const managerId of newManagerIds) {
@@ -502,10 +505,17 @@ export class CardsetUseCase {
           );
         }
 
-        const existing =
-          await this.cardsetManagerRepository.findAllByCardSetId(id);
+        const existing = await this.cardsetManagerRepository.findAllByCardSetId(
+          id,
+          manager,
+        );
+        revokedManagerIds = existing
+          .map((existingManager) => existingManager.userId)
+          .filter(
+            (existingManagerId) => !newManagerIds.includes(existingManagerId),
+          );
         for (const m of existing) {
-          await this.cardsetManagerRepository.delete(m.id);
+          await this.cardsetManagerRepository.delete(m.id, manager);
         }
         for (const managerId of newManagerIds) {
           const cardsetManager = CardsetManager.create({
@@ -516,8 +526,24 @@ export class CardsetUseCase {
         }
       }
 
-      return this.cardsetRepository.update(id, dto);
+      return this.cardsetRepository.update(id, dto, manager);
     });
+
+    await Promise.all(
+      revokedManagerIds.map((revokedUserId) =>
+        this.amqpConnection.publish(
+          'editor-access.exchange',
+          'cardset.editor.revoked',
+          {
+            eventType: 'CARDSET_EDITOR_REVOKED',
+            cardsetId: id,
+            userId: revokedUserId,
+            reason: 'MANAGER_REMOVED',
+          },
+        ),
+      ),
+    );
+    return updated;
   }
 
   async remove(id: number, userId: number): Promise<void> {
