@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { CardsetContentOrmEntity } from './infrastructure/persistence/orm/cardset-content.orm-entity';
+import { CardsetSnapshotOrmEntity } from './infrastructure/persistence/orm/cardset-snapshot.orm-entity';
 import { CardsetIncrementalOrmEntity } from './infrastructure/persistence/orm/cardset-incremental.orm-entity';
 import { CardsetManagerOrmEntity } from '../cardset/infrastructure/persistence/orm/cardset-manager.orm-entity';
 import { YjsDocumentService } from './infrastructure/redis/yjs-document.service';
@@ -15,13 +16,19 @@ import { GrpcClientModule } from '../shared/grpc/grpc-client.module';
   imports: [
     TypeOrmModule.forFeature([
       CardsetContentOrmEntity,
+      CardsetSnapshotOrmEntity,
       CardsetIncrementalOrmEntity,
       CardsetManagerOrmEntity,
     ]),
     AuthModule,
     GrpcClientModule,
   ],
-  providers: [YjsDocumentService, CollaborationUseCase, CollaborationGateway, UserGrpcClient],
+  providers: [
+    YjsDocumentService,
+    CollaborationUseCase,
+    CollaborationGateway,
+    UserGrpcClient,
+  ],
   exports: [CollaborationUseCase],
 })
 export class CollaborationModule {}
