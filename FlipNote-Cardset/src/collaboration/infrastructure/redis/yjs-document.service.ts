@@ -107,7 +107,10 @@ export class YjsDocumentService implements OnModuleInit, OnModuleDestroy {
       );
       await this.redisClient.set(key, Buffer.from(newState));
       await this.redisClient.expire(key, 86400 * 7);
-      await this.redisClient.rpush(historyKey, Buffer.from(update).toString('base64'));
+      await this.redisClient.rpush(
+        historyKey,
+        Buffer.from(update).toString('base64'),
+      );
 
       this.scheduleMySqlPersistence(cardsetId);
       return newState;
@@ -124,15 +127,22 @@ export class YjsDocumentService implements OnModuleInit, OnModuleDestroy {
     await this.persistCardsetIncrementals(cardsetId, true);
   }
 
-  async registerClient(cardsetId: string, clientId: string): Promise<void> {
+  async registerClient(
+    cardsetId: string,
+    clientId: string,
+    userId: string,
+  ): Promise<void> {
     try {
       const cardsetKey = `yjs:cardset:${cardsetId}:clients`;
       const clientKey = `yjs:client:${clientId}:cardsets`;
+      const userKey = `yjs:cardset:${cardsetId}:user:${userId}:clients`;
       await Promise.all([
         this.redisClient.sadd(cardsetKey, clientId),
         this.redisClient.sadd(clientKey, cardsetId),
+        this.redisClient.sadd(userKey, clientId),
         this.redisClient.expire(cardsetKey, 86400),
         this.redisClient.expire(clientKey, 86400),
+        this.redisClient.expire(userKey, 86400),
       ]);
     } catch (error) {
       this.logger.error(
@@ -142,12 +152,25 @@ export class YjsDocumentService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async unregisterClient(cardsetId: string, clientId: string): Promise<void> {
+  async unregisterClient(
+    cardsetId: string,
+    clientId: string,
+    userId?: string,
+  ): Promise<void> {
     try {
-      await Promise.all([
+      const commands = [
         this.redisClient.srem(`yjs:cardset:${cardsetId}:clients`, clientId),
         this.redisClient.srem(`yjs:client:${clientId}:cardsets`, cardsetId),
-      ]);
+      ];
+      if (userId) {
+        commands.push(
+          this.redisClient.srem(
+            `yjs:cardset:${cardsetId}:user:${userId}:clients`,
+            clientId,
+          ),
+        );
+      }
+      await Promise.all(commands);
     } catch (error) {
       this.logger.error(
         `Failed to unregister client ${clientId} from cardset ${cardsetId}:`,
@@ -167,6 +190,16 @@ export class YjsDocumentService implements OnModuleInit, OnModuleDestroy {
   async getClientCardsets(clientId: string): Promise<string[]> {
     try {
       return await this.redisClient.smembers(`yjs:client:${clientId}:cardsets`);
+    } catch {
+      return [];
+    }
+  }
+
+  async getUserClientIds(cardsetId: string, userId: string): Promise<string[]> {
+    try {
+      return await this.redisClient.smembers(
+        `yjs:cardset:${cardsetId}:user:${userId}:clients`,
+      );
     } catch {
       return [];
     }

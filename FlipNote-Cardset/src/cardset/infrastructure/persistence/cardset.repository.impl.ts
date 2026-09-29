@@ -45,10 +45,9 @@ export class CardsetRepositoryImpl implements ICardsetRepository {
       qb.andWhere('cs.groupId = :groupId', { groupId });
     }
     if (keyword) {
-      qb.andWhere(
-        '(cs.name LIKE :keyword OR cs.hashtag LIKE :keyword)',
-        { keyword: `%${keyword}%` },
-      );
+      qb.andWhere('(cs.name LIKE :keyword OR cs.hashtag LIKE :keyword)', {
+        keyword: `%${keyword}%`,
+      });
     }
     if (category) {
       qb.andWhere('cs.category = :category', { category });
@@ -101,12 +100,17 @@ export class CardsetRepositoryImpl implements ICardsetRepository {
     return CardsetMapper.toDomain(saved);
   }
 
-  async update(id: number, cardset: Partial<Cardset>): Promise<Cardset | null> {
-    await this.ormRepository.update(
-      id,
-      CardsetMapper.toOrm(cardset as Cardset),
-    );
-    return this.findById(id);
+  async update(
+    id: number,
+    cardset: Partial<Cardset>,
+    manager?: EntityManager,
+  ): Promise<Cardset | null> {
+    const repo = manager
+      ? manager.getRepository(CardsetOrmEntity)
+      : this.ormRepository;
+    await repo.update(id, CardsetMapper.toOrm(cardset as Cardset));
+    const updated = await repo.findOne({ where: { id } });
+    return updated ? CardsetMapper.toDomain(updated) : null;
   }
 
   async delete(id: number): Promise<void> {

@@ -122,6 +122,8 @@ Downstream Microservice
 | cardset-swagger | `/card-sets/swagger-ui.html`, `/card-sets/swagger-ui/**`, `/card-sets/v3/api-docs`, `/card-sets/v3/api-docs/**` | Public | HTTP |
 | cardset-health | `/card-sets/health` | Public | HTTP |
 
+기본 `application.yml`에서는 `cardset-websocket`에 `order: -1`을 지정하지 않는다. 먼저 정의된 HTTP 라우트가 Socket.IO의 초기 polling 요청을 처리하며, Upgrade 헤더가 있는 요청은 `WebsocketRoutingFilter`가 HTTP URI를 `ws://`로 변환한다. WebSocket 라우트를 무조건 우선하면 polling 요청까지 WebSocket 핸드셰이크로 처리되어 연결이 실패할 수 있다. `CardsetSocketRoutingTest`는 기본 설정의 polling·upgrade 양쪽을 검증한다.
+
 ### Notification Service (→ notification-service:8086)
 
 | Route ID | 경로 패턴 | 인증 |

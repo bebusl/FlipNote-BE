@@ -111,3 +111,7 @@ tasks.named('compileJava', JavaCompile) {
 tasks.named('processResources') {
 	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
+
+tasks.named('test') {
+	useJUnitPlatform()
+}

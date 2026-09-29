@@ -205,9 +205,17 @@ Yjs CRDT를 이용해 충돌 없는 실시간 동기화를 구현한다.
 - `IsCardSetViewable`: Reaction 서비스 등이 카드셋 접근 가능 여부 확인에 사용
 - `GetCardSetsByIds`: 배치 카드셋 정보 조회
 
-### RabbitMQ (인바운드)
+### RabbitMQ (인바운드·아웃바운드)
 
 `reaction.consumer.ts`가 Reaction 서비스의 반응 이벤트(좋아요/북마크 수 변경)를 구독해 `cardset_metadata` 업데이트에 반영한다.
+
+- `shared/messaging/messaging.module.ts`가 반응 이벤트와 편집 권한 이벤트의 RabbitMQ 연결·exchange 설정을 공유한다. 같은 이름의 연결을 여러 번 초기화하지 않는다.
+- 매니저 교체는 삭제·추가·카드셋 갱신에 같은 EntityManager를 사용한다. 커밋 후 `editor-access.exchange` / `cardset.editor.revoked`로 `CARDSET_EDITOR_REVOKED`를 발행한다.
+- `EditorAccessConsumer`는 `cardset.editor-access.queue`에서 위 이벤트와 Group의 `group.member.kicked`를 구독한다. 그룹 강퇴는 그룹 내 모든 카드셋의 매니저 행을 삭제하고 편집 세션을 철회한다. 행이 이미 없어도 소켓 퇴장을 수행하여 재전달을 처리한다.
+- `CollaborationGateway`는 소켓·카드셋별 입장 상태와 편집 버퍼를 관리한다. 강퇴 시 비동기 정리에 앞서 세션을 무효화한다. Redis 인덱스의 TTL·조회 실패에 영향을 받지 않도록 현재 서버의 소켓을 직접 찾아 `kicked`를 전송한다.
+- 현재 단일 Cardset 인스턴스를 전제로 한다. 여러 replica에서는 이벤트 fan-out 또는 Socket.IO adapter를 통한 전체 인스턴스 철회가 필요하다.
+- DB 커밋과 MQ 발행은 별도 작업이며 outbox는 구현하지 않았다. 그 사이 장애로 인한 이벤트 유실은 보장하지 않는다. 이미 실행 중인 Redis 저장은 롤백하지 않으며, 아직 시작하지 않은 버퍼와 이후 편집을 차단한다.
+
 
 ---
 

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { MessagingModule } from '../shared/messaging/messaging.module';
 
 import { CardsetContentOrmEntity } from './infrastructure/persistence/orm/cardset-content.orm-entity';
 import { CardsetSnapshotOrmEntity } from './infrastructure/persistence/orm/cardset-snapshot.orm-entity';
@@ -11,15 +12,19 @@ import { CollaborationGateway } from './infrastructure/gateway/collaboration.gat
 import { AuthModule } from '../auth/auth.module';
 import { UserGrpcClient } from '../cardset/infrastructure/grpc/user-grpc.client';
 import { GrpcClientModule } from '../shared/grpc/grpc-client.module';
+import { CardsetOrmEntity } from '../cardset/infrastructure/persistence/orm/cardset.orm-entity';
+import { EditorAccessConsumer } from './infrastructure/messaging/editor-access.consumer';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
+      CardsetOrmEntity,
       CardsetContentOrmEntity,
       CardsetSnapshotOrmEntity,
       CardsetIncrementalOrmEntity,
       CardsetManagerOrmEntity,
     ]),
+    MessagingModule,
     AuthModule,
     GrpcClientModule,
   ],
@@ -28,7 +33,8 @@ import { GrpcClientModule } from '../shared/grpc/grpc-client.module';
     CollaborationUseCase,
     CollaborationGateway,
     UserGrpcClient,
+    EditorAccessConsumer,
   ],
-  exports: [CollaborationUseCase],
+  exports: [CollaborationUseCase, MessagingModule],
 })
 export class CollaborationModule {}

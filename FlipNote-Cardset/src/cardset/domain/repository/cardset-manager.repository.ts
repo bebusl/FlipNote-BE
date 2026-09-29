@@ -12,7 +12,10 @@ export interface ICardsetManagerRepository {
     userId: number,
     cardSetId: number,
   ): Promise<CardsetManager | null>;
-  findAllByCardSetId(cardSetId: number): Promise<CardsetManager[]>;
+  findAllByCardSetId(
+    cardSetId: number,
+    manager?: EntityManager,
+  ): Promise<CardsetManager[]>;
   findByCardSetIds(cardSetIds: number[]): Promise<CardsetManager[]>;
-  delete(id: number): Promise<void>;
+  delete(id: number, manager?: EntityManager): Promise<void>;
 }

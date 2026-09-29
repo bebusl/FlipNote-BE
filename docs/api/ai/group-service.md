@@ -247,7 +247,7 @@ auth_note: >
 ### DELETE /v1/groups/{groupId}/members/{memberId}
 
 **Auth:** Bearer JWT (Gateway strips, X-USER-ID forwarded)
-**Description:** Kick a member from the group. Requester must have MEMBER_MANAGE permission or be OWNER/HEAD_MANAGER with higher role than the target.
+**Description:** Kick a member belonging to the requested group. Requires MEMBER_MANAGE permission. After commit, publishes GROUP_MEMBER_KICKED so Cardset asynchronously removes manager assignments and revokes active editing sessions.
 
 **Path Params:**
   groupId: number — group ID
@@ -257,8 +257,7 @@ auth_note: >
 
 **Errors:**
   403 PERM_001 — permission denied
-  403 PERM_005 — requester's role is lower than target's
-  404 MEMBER_001 — member not found
+  404 MEMBER_001 — member not found or belongs to another group
 
 ---
 

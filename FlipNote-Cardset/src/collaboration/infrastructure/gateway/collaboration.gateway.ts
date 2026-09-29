@@ -17,6 +17,12 @@ import { YjsDocumentService } from '../redis/yjs-document.service';
 import { CollaborationUseCase } from '../../application/collaboration.use-case';
 import { WsExceptionFilter } from '../../../shared/common/ws-exception.filter';
 
+interface EditorSession {
+  editable: boolean;
+  joining: boolean;
+  pendingUpdates: number[][];
+}
+
 @UseFilters(WsExceptionFilter)
 @UseGuards(WsAuthGuard)
 @WebSocketGateway({
@@ -26,7 +32,8 @@ import { WsExceptionFilter } from '../../../shared/common/ws-exception.filter';
   pingInterval: 25000,
 })
 export class CollaborationGateway
-  implements OnGatewayConnection, OnGatewayDisconnect {
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server!: Server;
 
@@ -34,16 +41,35 @@ export class CollaborationGateway
 
   private readonly logger = new Logger(CollaborationGateway.name);
   private flushTimeouts = new Map<string, NodeJS.Timeout>();
-  private joiningClients = new Set<string>(); // join 처리 중인 clientId
-  private pendingUpdates = new Map<string, { cardsetId: string; update: number[] }[]>(); // join 완료 전 수신된 update 버퍼
+  private readonly sessions = new Map<string, Map<string, EditorSession>>();
 
   constructor(
     private readonly yjsDocumentService: YjsDocumentService,
     private readonly collaborationUseCase: CollaborationUseCase,
-  ) { }
+  ) {}
 
   handleConnection(client: Socket) {
     this.logger.log(`[클라이언트 연결] clientId=${client.id}`);
+  }
+
+  async revokeEditor(
+    cardsetId: string,
+    userId: string,
+    reason: string,
+  ): Promise<void> {
+    // The server owns live sockets; Redis indexes can expire or be unavailable.
+    // Include pending joins so a stale permission lookup cannot reopen the room.
+    const clients = [...this.server.sockets.sockets.values()].filter(
+      (client) =>
+        this.getUserId(client) === userId && this.getSession(client, cardsetId),
+    );
+    await Promise.all(
+      clients.map(async (client) => {
+        const cleanup = this.removeClientFromCardset(client, cardsetId);
+        client.emit('kicked', { cardsetId, reason });
+        await cleanup;
+      }),
+    );
   }
 
   async handleDisconnect(client: Socket) {
@@ -57,95 +83,80 @@ export class CollaborationGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { cardsetId: string },
   ) {
-    const { cardsetId } = data;
-    this.logger.log(
-      `[cardset 입장] userId=${user.userId}, cardsetId=${cardsetId}, clientId=${client.id}`,
-    );
+    const cardsetId = this.parseCardsetId(data.cardsetId);
+    if (!cardsetId) {
+      client.emit('error', { message: 'Invalid cardset ID' });
+      return;
+    }
+    if (this.getSession(client, cardsetId)) return;
+    const session: EditorSession = {
+      editable: false,
+      joining: true,
+      pendingUpdates: [],
+    };
+    const sessions =
+      this.sessions.get(client.id) ?? new Map<string, EditorSession>();
+    sessions.set(cardsetId, session);
+    this.sessions.set(client.id, sessions);
+    const isCurrent = () => this.getSession(client, cardsetId) === session;
 
     try {
       const isManager = await this.collaborationUseCase.isManager(
         Number(cardsetId),
         Number(user.userId),
       );
+      if (!isCurrent()) return;
       if (!isManager) {
-        this.logger.warn(
-          `[cardset 입장 거부] 매니저 아님 - userId=${user.userId}, cardsetId=${cardsetId}`,
-        );
-        client.emit('error', { message: '카드셋 편집 권한이 없습니다.' });
+        this.rejectEditEvent(client, cardsetId);
+        await this.removeClientFromCardset(client, cardsetId);
         return;
       }
 
-      this.joiningClients.add(client.id);
-      void client.join(`cardset:${cardsetId}`);
-
-      await this.yjsDocumentService.registerClient(cardsetId, client.id);
+      await client.join(this.roomName(cardsetId));
+      if (!isCurrent()) return;
+      session.editable = true;
+      await this.yjsDocumentService.registerClient(
+        cardsetId,
+        client.id,
+        user.userId,
+      );
+      if (!isCurrent()) {
+        if (!this.getSession(client, cardsetId)) {
+          await this.yjsDocumentService.unregisterClient(
+            cardsetId,
+            client.id,
+            user.userId,
+          );
+        }
+        return;
+      }
       this.clearScheduledFlush(cardsetId);
 
       let doc = await this.yjsDocumentService.loadDocument(cardsetId);
-      if (!doc) {
-        doc = await this.loadDocumentFromDBOrCreate(cardsetId);
-      }
-
-      if (!doc) {
-        this.logger.warn(
-          `Failed to load or create document for cardset ${cardsetId}, creating empty document`,
-        );
-        doc = new Y.Doc();
-      }
+      if (!isCurrent()) return;
+      if (!doc) doc = await this.loadDocumentFromDBOrCreate(cardsetId);
+      if (!isCurrent()) return;
 
       const state = Y.encodeStateAsUpdate(doc);
       client.emit('sync', { cardsetId, update: Array.from(state) });
-      // client.emit('joined', {
-      //   cardsetId,
-      //   userId: user.userId,
-      //   nickname: user.nickname
-      // });
-
-      this.joiningClients.delete(client.id);
-      this.logger.log(`User ${user.userId} (${user.nickname}) joined cardset ${cardsetId}`);
-
-      const buffered = this.pendingUpdates.get(client.id);
-      if (buffered && buffered.length > 0) {
-        this.logger.log(
-          `[버퍼 처리] join 완료 후 밀린 update 처리 - clientId=${client.id}, count=${buffered.length}`,
+      // Keep buffering during the drain, and recheck after every asynchronous save.
+      while (session.pendingUpdates.length > 0 && isCurrent()) {
+        const update = session.pendingUpdates.shift()!;
+        const finalState = await this.yjsDocumentService.saveUpdate(
+          cardsetId,
+          new Uint8Array(update),
         );
-        this.pendingUpdates.delete(client.id);
-        for (const pending of buffered) {
-          const updateBuffer = new Uint8Array(pending.update);
-          const finalState = await this.yjsDocumentService.saveUpdate(pending.cardsetId, updateBuffer);
-          this.server.to(`cardset:${pending.cardsetId}`).emit('sync', {
-            cardsetId: pending.cardsetId,
-            update: finalState,
-          });
-          this.logger.log(
-            `[버퍼 처리 완료] cardsetId=${pending.cardsetId}, clientId=${client.id}`,
-          );
-        }
+        if (!isCurrent()) return;
+        this.server
+          .to(this.roomName(cardsetId))
+          .emit('sync', { cardsetId, update: finalState });
       }
+      session.joining = false;
     } catch (error) {
       this.logger.error('Error joining cardset:', error);
-      this.logger.error('Error details:', {
-        cardsetId,
-        userId: user?.userId,
-        errorMessage: error instanceof Error ? error.message : String(error),
-        errorStack: error instanceof Error ? error.stack : undefined,
-      });
-
-      this.joiningClients.delete(client.id);
-      this.pendingUpdates.delete(client.id);
-      try {
-        const emptyDoc = new Y.Doc();
-        const state = Y.encodeStateAsUpdate(emptyDoc);
-        client.emit('sync', { cardsetId, update: Array.from(state) });
-        this.logger.warn(
-          `Sent empty document to client due to error for cardset ${cardsetId}`,
-        );
-      } catch (fallbackError) {
-        this.logger.error('Failed to send fallback document:', fallbackError);
-        client.emit('error', {
-          message: 'Failed to join cardset',
-          details: error instanceof Error ? error.message : String(error),
-        });
+      if (isCurrent()) {
+        await this.removeClientFromCardset(client, cardsetId);
+        client.emit('error', { message: 'Failed to join cardset' });
       }
     }
   }
@@ -157,18 +168,16 @@ export class CollaborationGateway
     @MessageBody() data: { cardsetId: string },
   ) {
     try {
-      const { cardsetId } = data;
+      const cardsetId = this.parseCardsetId(data.cardsetId);
+      if (!cardsetId) {
+        client.emit('error', { message: 'Invalid cardset ID' });
+        return;
+      }
       this.logger.log(
         `[cardset 퇴장] userId=${user.userId}, cardsetId=${cardsetId}, clientId=${client.id}`,
       );
 
-      void client.leave(`cardset:${cardsetId}`);
-      await this.yjsDocumentService.unregisterClient(cardsetId, client.id);
-      const activeCount =
-        await this.yjsDocumentService.getActiveClientCount(cardsetId);
-      if (activeCount === 0) {
-        this.scheduleFlush(cardsetId);
-      }
+      await this.removeClientFromCardset(client, cardsetId);
       this.logger.log(`User ${user.userId} left cardset ${cardsetId}`);
     } catch (error) {
       this.logger.error('Error leaving cardset:', error);
@@ -181,7 +190,16 @@ export class CollaborationGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { cardsetId: string; awareness: number[] },
   ) {
-    const { cardsetId, awareness } = payload;
+    const { awareness } = payload;
+    const cardsetId = this.parseCardsetId(payload.cardsetId);
+    if (!cardsetId) {
+      client.emit('error', { message: 'Invalid cardset ID' });
+      return;
+    }
+    if (!this.canEdit(client, cardsetId)) {
+      this.rejectEditEvent(client, cardsetId);
+      return;
+    }
     this.logger.log(
       `[awareness 브로드캐스트] cardsetId=${cardsetId}, userId=${user.userId}, clientId=${client.id}, awarenessSize=${awareness.length}`,
     );
@@ -202,20 +220,24 @@ export class CollaborationGateway
     @MessageBody() data: { cardsetId: string; update?: number[] },
   ) {
     try {
-      const { cardsetId, update } = data;
+      const { update } = data;
+      const cardsetId = this.parseCardsetId(data.cardsetId);
+      if (!cardsetId) {
+        client.emit('error', { message: 'Invalid cardset ID' });
+        return;
+      }
       this.logger.log(
         `[update 수신] userId=${user.userId}, cardsetId=${cardsetId}, clientId=${client.id}, updateSize=${update?.length ?? 0}`,
       );
 
-      if (this.joiningClients.has(client.id)) {
-        if (update) {
-          const buffer = this.pendingUpdates.get(client.id) ?? [];
-          buffer.push({ cardsetId, update });
-          this.pendingUpdates.set(client.id, buffer);
-          this.logger.log(
-            `[update 버퍼링] join 완료 후 처리 예정 - clientId=${client.id}, cardsetId=${cardsetId}, 버퍼 크기=${buffer.length}`,
-          );
-        }
+      if (!this.canEdit(client, cardsetId)) {
+        this.rejectEditEvent(client, cardsetId);
+        return;
+      }
+
+      const session = this.getSession(client, cardsetId)!;
+      if (session.joining) {
+        if (update) session.pendingUpdates.push(update);
         return;
       }
 
@@ -225,8 +247,12 @@ export class CollaborationGateway
       }
 
       const updateBuffer = new Uint8Array(update);
-      const finalState = await this.yjsDocumentService.saveUpdate(cardsetId, updateBuffer);
+      const finalState = await this.yjsDocumentService.saveUpdate(
+        cardsetId,
+        updateBuffer,
+      );
 
+      if (this.getSession(client, cardsetId) !== session) return;
       this.server.to(`cardset:${cardsetId}`).emit('sync', {
         cardsetId,
         update: finalState,
@@ -304,21 +330,72 @@ export class CollaborationGateway
   }
 
   private async removeClientFromAllCardsets(client: Socket) {
-    const cardsets = await this.yjsDocumentService.getClientCardsets(client.id);
-    this.logger.log(
-      `[클라이언트 전체 cardset 제거] clientId=${client.id}, cardsets=${JSON.stringify(cardsets)}`,
+    const cardsets = [...(this.sessions.get(client.id)?.keys() ?? [])];
+    await Promise.all(
+      cardsets.map((cardsetId) =>
+        this.removeClientFromCardset(client, cardsetId),
+      ),
     );
-    if (cardsets.length === 0) return;
+  }
 
-    for (const cardsetId of cardsets) {
-      void client.leave(`cardset:${cardsetId}`);
-      await this.yjsDocumentService.unregisterClient(cardsetId, client.id);
-      const activeCount =
-        await this.yjsDocumentService.getActiveClientCount(cardsetId);
-      if (activeCount === 0) {
-        this.scheduleFlush(cardsetId);
-      }
-    }
+  private async removeClientFromCardset(
+    client: Socket,
+    cardsetId: string,
+  ): Promise<void> {
+    const sessions = this.sessions.get(client.id);
+    const session = sessions?.get(cardsetId);
+    if (!session) return;
+    // Cancel synchronously, before any asynchronous room/Redis cleanup.
+    session.editable = false;
+    session.pendingUpdates.length = 0;
+    sessions!.delete(cardsetId);
+    if (sessions!.size === 0) this.sessions.delete(client.id);
+    await client.leave(this.roomName(cardsetId));
+    await this.yjsDocumentService.unregisterClient(
+      cardsetId,
+      client.id,
+      this.getUserId(client),
+    );
+    const activeCount =
+      await this.yjsDocumentService.getActiveClientCount(cardsetId);
+    if (activeCount === 0) this.scheduleFlush(cardsetId);
+  }
+
+  private parseCardsetId(value: unknown): string | null {
+    if (typeof value !== 'string' && typeof value !== 'number') return null;
+    if (!/^\d+$/.test(String(value))) return null;
+    const id = Number(value);
+    return Number.isSafeInteger(id) && id > 0 ? String(id) : null;
+  }
+
+  private roomName(cardsetId: string): string {
+    return `cardset:${cardsetId}`;
+  }
+
+  private getSession(
+    client: Socket,
+    cardsetId: string,
+  ): EditorSession | undefined {
+    return this.sessions.get(client.id)?.get(cardsetId);
+  }
+
+  private canEdit(client: Socket, cardsetId: string): boolean {
+    return (
+      client.rooms.has(this.roomName(cardsetId)) &&
+      this.getSession(client, cardsetId)?.editable === true
+    );
+  }
+
+  private rejectEditEvent(client: Socket, cardsetId: string): void {
+    this.logger.warn(
+      `[편집 이벤트 거부] cardsetId=${cardsetId}, clientId=${client.id}`,
+    );
+    client.emit('error', { message: '카드셋 편집 권한이 없습니다.' });
+  }
+
+  private getUserId(client: Socket): string | undefined {
+    const data = client.data as { user?: UserAuth };
+    return data.user?.userId;
   }
 
   private scheduleFlush(cardsetId: string) {

@@ -25,6 +25,10 @@ export interface ICardsetRepository {
   findById(id: number): Promise<Cardset | null>;
   findByIds(ids: number[]): Promise<Cardset[]>;
   save(cardset: Cardset, manager?: EntityManager): Promise<Cardset>;
-  update(id: number, cardset: Partial<Cardset>): Promise<Cardset | null>;
+  update(
+    id: number,
+    cardset: Partial<Cardset>,
+    manager?: EntityManager,
+  ): Promise<Cardset | null>;
   delete(id: number): Promise<void>;
 }
