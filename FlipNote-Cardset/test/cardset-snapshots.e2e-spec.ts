@@ -10,6 +10,13 @@ import { CardsetContentOrmEntity } from '../src/collaboration/infrastructure/per
 import { CardsetSnapshotOrmEntity } from '../src/collaboration/infrastructure/persistence/orm/cardset-snapshot.orm-entity';
 import { CardsetManagerOrmEntity } from '../src/cardset/infrastructure/persistence/orm/cardset-manager.orm-entity';
 import { YjsDocumentService } from '../src/collaboration/infrastructure/redis/yjs-document.service';
+import { CardsetSnapshotBackfillService } from '../src/collaboration/application/cardset-snapshot-backfill.service';
+import { CardsetOrmEntity } from '../src/cardset/infrastructure/persistence/orm/cardset.orm-entity';
+import { CardOrmEntity } from '../src/cardset/infrastructure/persistence/orm/card.orm-entity';
+import { CardsetUseCase } from '../src/cardset/application/cardset.use-case';
+import { CardsetRepositoryImpl } from '../src/cardset/infrastructure/persistence/cardset.repository.impl';
+import { CardsetManagerRepositoryImpl } from '../src/cardset/infrastructure/persistence/cardset-manager.repository.impl';
+import { BusinessException } from '../src/shared/common/business.exception';
 
 // Opt in with SNAPSHOT_TEST_MYSQL=true. The DB user needs CREATE/DROP DATABASE.
 // Every run owns a new database; existing application tables are never touched.
@@ -68,6 +75,8 @@ describeMySql('Cardset snapshot persistence (MySQL)', () => {
       password: connection.password,
       database,
       entities: [
+        CardsetOrmEntity,
+        CardOrmEntity,
         CardsetContentOrmEntity,
         CardsetSnapshotOrmEntity,
         CardsetManagerOrmEntity,
@@ -78,6 +87,7 @@ describeMySql('Cardset snapshot persistence (MySQL)', () => {
     module = await Test.createTestingModule({
       providers: [
         CollaborationUseCase,
+        CardsetSnapshotBackfillService,
         { provide: DataSource, useValue: dataSource },
         { provide: YjsDocumentService, useValue: yjs },
         ...[
@@ -302,5 +312,236 @@ describeMySql('Cardset snapshot persistence (MySQL)', () => {
     expect(restored.getArray('cards').toJSON()).toEqual(originalCards);
     expect(yjs.saveDocument).toHaveBeenCalledWith('111', restored);
     restored.destroy();
+  });
+
+  describe('legacy backfill and cardset deletion', () => {
+    const legacyRepository = () =>
+      dataSource.getRepository(CardsetContentOrmEntity);
+    const backfill = () =>
+      module.get(CardsetSnapshotBackfillService).backfill();
+
+    beforeEach(async () => {
+      // Backfill scans the whole legacy table, so isolate each scenario.
+      for (const entity of [
+        CardsetSnapshotOrmEntity,
+        CardsetContentOrmEntity,
+      ]) {
+        await dataSource
+          .getRepository(entity)
+          .createQueryBuilder()
+          .delete()
+          .execute();
+      }
+    });
+
+    it('backfills at application bootstrap and preserves exact JSON and the last save time on restart', async () => {
+      const content = JSON.stringify(
+        { cards: originalCards, extra: 'preserved' },
+        null,
+        2,
+      );
+      const savedAt = new Date('2026-09-20T12:34:56Z');
+      await legacyRepository().insert({
+        cardsetId: 201,
+        content,
+        updatedAt: savedAt,
+      });
+
+      await module.init();
+      const before = await snapshots(201);
+      expect(before).toHaveLength(1);
+      expect(before[0].content).toBe(content);
+      expect(before[0].createdAt).toEqual(savedAt);
+      expect(await useCase.getCardsFromDB(201)).toEqual(originalCards);
+      const restored = await useCase.loadCardsetContentFromDB(201);
+      expect(restored?.getArray('cards').toJSON()).toEqual(originalCards);
+      restored?.destroy();
+      expect(await backfill()).toBe(0);
+      expect(await snapshots(201)).toEqual(before);
+      expect(
+        (await legacyRepository().findOneByOrFail({ cardsetId: 201 })).content,
+      ).toBe(content);
+    });
+
+    it('does not overwrite existing snapshots with legacy content', async () => {
+      await legacyRepository().insert({
+        cardsetId: 202,
+        content: JSON.stringify({ cards: originalCards }),
+      });
+      await dataSource.getRepository(CardsetSnapshotOrmEntity).insert({
+        cardsetId: 202,
+        content: '{"cards":[]}',
+      });
+      const before = await snapshots(202);
+      expect(await backfill()).toBe(0);
+      expect(await snapshots(202)).toEqual(before);
+      expect(await useCase.getCardsFromDB(202)).toEqual([]);
+    });
+
+    it('migrates saved empty cards but skips NULL and empty legacy content', async () => {
+      await legacyRepository().insert([
+        { cardsetId: 203, content: '{"cards":[]}' },
+        { cardsetId: 204 },
+        { cardsetId: 205, content: '' },
+      ]);
+      expect(await backfill()).toBe(1);
+      const restored = await useCase.loadCardsetContentFromDB(203);
+      expect(restored).toBeInstanceOf(Y.Doc);
+      expect(restored?.getArray('cards').toJSON()).toEqual([]);
+      restored?.destroy();
+      for (const id of [204, 205]) {
+        expect(await snapshots(id)).toEqual([]);
+        expect(await useCase.getCardsFromDB(id)).toEqual([]);
+        expect(await useCase.loadCardsetContentFromDB(id)).toBeNull();
+      }
+    });
+
+    it.each([
+      ['malformed JSON', '{'],
+      ['missing cards', '{}'],
+      ['non-array cards', '{"cards":{}}'],
+      ['non-object card', '{"cards":[null]}'],
+      ['numeric card ID', '{"cards":[{"id":1,"question":"q","answer":"a"}]}'],
+      ['empty card ID', '{"cards":[{"id":" ","question":"q","answer":"a"}]}'],
+      ['invalid fields', '{"cards":[{"id":"a","question":1,"answer":"a"}]}'],
+      [
+        'duplicate IDs',
+        JSON.stringify({ cards: [originalCards[0], originalCards[0]] }),
+      ],
+    ])(
+      'stops on %s without changing source data and resumes without duplicates',
+      async (_label, content) => {
+        await legacyRepository().insert([
+          { cardsetId: 206, content: JSON.stringify({ cards: originalCards }) },
+          { cardsetId: 207, content },
+        ]);
+        await expect(
+          module.get(CardsetSnapshotBackfillService).onApplicationBootstrap(),
+        ).rejects.toThrow('cardsetId=207');
+        const before = await snapshots(206);
+        expect(before).toHaveLength(1);
+        expect(await snapshots(207)).toEqual([]);
+        expect(
+          (await legacyRepository().findOneByOrFail({ cardsetId: 207 }))
+            .content,
+        ).toBe(content);
+
+        await legacyRepository().update(
+          { cardsetId: 207 },
+          { content: '{"cards":[]}' },
+        );
+        expect(await backfill()).toBe(1);
+        expect(await snapshots(206)).toEqual(before);
+        expect(await snapshots(207)).toHaveLength(1);
+      },
+    );
+
+    it('serializes concurrent backfills using the legacy row lock', async () => {
+      await legacyRepository().insert({
+        cardsetId: 208,
+        content: JSON.stringify({ cards: originalCards }),
+      });
+      const counts = await Promise.all([backfill(), backfill()]);
+      expect(counts.reduce((sum, count) => sum + count, 0)).toBe(1);
+      expect(await snapshots(208)).toHaveLength(1);
+    });
+
+    it('keeps the explicit save as the latest snapshot when it races with backfill', async () => {
+      await legacyRepository().insert({
+        cardsetId: 209,
+        content: JSON.stringify({ cards: originalCards }),
+      });
+      yjs.loadDocument.mockResolvedValue(documentWith([]));
+      await Promise.all([backfill(), useCase.saveCardsetContent(209)]);
+      const rows = await snapshots(209);
+      expect(rows.length).toBeGreaterThanOrEqual(1);
+      expect(rows.length).toBeLessThanOrEqual(2);
+      expect(rows[rows.length - 1].content).toBe('{"cards":[]}');
+      expect(await useCase.getCardsFromDB(209)).toEqual([]);
+      expect(await backfill()).toBe(0);
+    });
+
+    it('continues beyond one batch and keeps orphaned legacy history', async () => {
+      await legacyRepository().insert(
+        Array.from({ length: 101 }, (_, index) => ({
+          cardsetId: 300 + index,
+          content: '{"cards":[]}',
+        })),
+      );
+      expect(await backfill()).toBe(101);
+      expect(await snapshots(400)).toHaveLength(1);
+      expect(await backfill()).toBe(0);
+    });
+
+    it.each(['backfilled', 'explicitly saved'])(
+      'preserves %s snapshots through the real cardset deletion path',
+      async (mode) => {
+        const cardsets = new CardsetRepositoryImpl(
+          dataSource.getRepository(CardsetOrmEntity),
+        );
+        const managers = new CardsetManagerRepositoryImpl(
+          dataSource.getRepository(CardsetManagerOrmEntity),
+        );
+        const cardsetUseCase = new CardsetUseCase(
+          ...([
+            cardsets,
+            {},
+            managers,
+            {},
+            {},
+            {},
+            {},
+            {},
+            dataSource,
+            {},
+            useCase,
+            {},
+          ] as unknown as ConstructorParameters<typeof CardsetUseCase>),
+        );
+        const cardset = await dataSource.getRepository(CardsetOrmEntity).save({
+          name: 'snapshot retention',
+          groupId: 1,
+          category: 'test',
+        });
+        await dataSource
+          .getRepository(CardOrmEntity)
+          .insert({ cardsetId: cardset.id, content: 'legacy card' });
+        await dataSource
+          .getRepository(CardsetManagerOrmEntity)
+          .insert({ cardSetId: cardset.id, userId: 1 });
+        if (mode === 'backfilled') {
+          await legacyRepository().insert({
+            cardsetId: cardset.id,
+            content: JSON.stringify({ cards: originalCards }),
+          });
+          await backfill();
+        } else {
+          yjs.loadDocument.mockResolvedValue(documentWith(originalCards));
+          await useCase.saveCardsetContent(cardset.id);
+        }
+        const before = await snapshots(cardset.id);
+        expect(before).toHaveLength(1);
+        await expect(
+          cardsetUseCase.remove(cardset.id, 999),
+        ).rejects.toBeInstanceOf(BusinessException);
+        expect(await cardsets.findById(cardset.id)).not.toBeNull();
+
+        await cardsetUseCase.remove(cardset.id, 1);
+        expect(await cardsets.findById(cardset.id)).toBeNull();
+        expect(
+          await dataSource
+            .getRepository(CardOrmEntity)
+            .countBy({ cardsetId: cardset.id }),
+        ).toBe(0);
+        expect(await snapshots(cardset.id)).toEqual(before);
+        expect(await useCase.getCardsFromDB(cardset.id)).toEqual(originalCards);
+        expect(await backfill()).toBe(0);
+        expect(await snapshots(cardset.id)).toEqual(before);
+        // Retaining history does not make a deleted cardset readable via its API.
+        await expect(
+          cardsetUseCase.findCardsFromYjs(cardset.id, 1),
+        ).rejects.toBeInstanceOf(BusinessException);
+      },
+    );
   });
 });
