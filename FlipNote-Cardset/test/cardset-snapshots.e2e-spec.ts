@@ -253,4 +253,54 @@ describeMySql('Cardset snapshot persistence (MySQL)', () => {
     // Full cardset deletion and legacy backfill remain task 4.
   });
 
+  it('reads the highest snapshot ID for this cardset despite conflicting legacy content and timestamps', async () => {
+    const updatedCards = [
+      { id: 'card-a', question: '최신 질문', answer: '최신 정답' },
+    ];
+    const snapshotRepository = dataSource.getRepository(
+      CardsetSnapshotOrmEntity,
+    );
+    await snapshotRepository.insert({
+      cardsetId: 108,
+      content: JSON.stringify({ cards: originalCards }),
+      createdAt: new Date('2026-09-22T12:00:00Z'),
+    });
+    await snapshotRepository.insert({
+      cardsetId: 108,
+      content: JSON.stringify({ cards: updatedCards }),
+      createdAt: new Date('2026-09-21T12:00:00Z'),
+    });
+    // A different cardset has the globally highest ID.
+    await snapshotRepository.insert({
+      cardsetId: 109,
+      content: JSON.stringify({ cards: [] }),
+    });
+    await dataSource.getRepository(CardsetContentOrmEntity).insert({
+      cardsetId: 108,
+      content: JSON.stringify({ cards: originalCards }),
+    });
+
+    expect(await useCase.getCardsFromDB(108)).toEqual(updatedCards);
+    const restored = await useCase.loadCardsetContentFromDB(108);
+    expect(restored?.getArray('cards').toJSON()).toEqual(updatedCards);
+    restored?.destroy();
+  });
+
+  it('returns no saved content for a cardset without snapshots', async () => {
+    expect(await useCase.getCardsFromDB(110)).toEqual([]);
+    expect(await useCase.loadCardsetContentFromDB(110)).toBeNull();
+  });
+
+  it('restores a saved snapshot into Redis when the editing document is missing', async () => {
+    await dataSource.getRepository(CardsetSnapshotOrmEntity).insert({
+      cardsetId: 111,
+      content: JSON.stringify({ cards: originalCards }),
+    });
+    yjs.loadDocument.mockResolvedValue(null);
+
+    const restored = await useCase.getOrCreateDocument(111);
+    expect(restored.getArray('cards').toJSON()).toEqual(originalCards);
+    expect(yjs.saveDocument).toHaveBeenCalledWith('111', restored);
+    restored.destroy();
+  });
 });
