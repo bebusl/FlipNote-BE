@@ -25,6 +25,7 @@ describeMySql('Cardset snapshot persistence (MySQL)', () => {
   const documents: Y.Doc[] = [];
   const yjs = {
     loadDocument: jest.fn<Promise<Y.Doc | null>, [string]>(),
+    saveDocument: jest.fn<Promise<void>, [string, Y.Doc]>(),
     flushIncrementalHistory: jest.fn<Promise<void>, [string]>(),
   };
 
@@ -79,7 +80,11 @@ describeMySql('Cardset snapshot persistence (MySQL)', () => {
         CollaborationUseCase,
         { provide: DataSource, useValue: dataSource },
         { provide: YjsDocumentService, useValue: yjs },
-        ...[CardsetContentOrmEntity, CardsetManagerOrmEntity].map((entity) => ({
+        ...[
+          CardsetContentOrmEntity,
+          CardsetManagerOrmEntity,
+          CardsetSnapshotOrmEntity,
+        ].map((entity) => ({
           provide: getRepositoryToken(entity),
           useValue: dataSource.getRepository(entity),
         })),
@@ -90,6 +95,7 @@ describeMySql('Cardset snapshot persistence (MySQL)', () => {
 
   beforeEach(() => {
     yjs.loadDocument.mockReset();
+    yjs.saveDocument.mockReset().mockResolvedValue(undefined);
     yjs.flushIncrementalHistory.mockReset().mockResolvedValue(undefined);
   });
 
@@ -123,7 +129,7 @@ describeMySql('Cardset snapshot persistence (MySQL)', () => {
     expect(rows[1].content).toBe(JSON.stringify({ cards: updatedCards }));
     expect(rows[1].id).toBeGreaterThan(rows[0].id);
     expect(rows[0].createdAt).toBeInstanceOf(Date);
-    // Task 3 is deliberately untouched: legacy readers must still see this save.
+    // Readers must select the latest saved snapshot.
     expect(await useCase.getCardsFromDB(101)).toEqual(updatedCards);
     const restored = await useCase.loadCardsetContentFromDB(101);
     expect(restored?.getArray('cards').toJSON()).toEqual(updatedCards);
@@ -141,6 +147,11 @@ describeMySql('Cardset snapshot persistence (MySQL)', () => {
       '{"cards":[]}',
       '{"cards":[]}',
     ]);
+    expect(await useCase.getCardsFromDB(102)).toEqual([]);
+    const restored = await useCase.loadCardsetContentFromDB(102);
+    expect(restored).toBeInstanceOf(Y.Doc);
+    expect(restored?.getArray('cards').toJSON()).toEqual([]);
+    restored?.destroy();
   });
 
   it('leaves existing content intact when the Redis document is missing', async () => {
@@ -153,7 +164,13 @@ describeMySql('Cardset snapshot persistence (MySQL)', () => {
       NotFoundException,
     );
     expect(await snapshots(103)).toEqual([]);
-    expect(await useCase.getCardsFromDB(103)).toEqual(originalCards);
+    const legacy = await dataSource
+      .getRepository(CardsetContentOrmEntity)
+      .findOneByOrFail({ cardsetId: 103 });
+    expect(legacy.content).toBe(JSON.stringify({ cards: originalCards }));
+    // Legacy backfill is task 4; reads no longer fall back to this row.
+    expect(await useCase.getCardsFromDB(103)).toEqual([]);
+    expect(await useCase.loadCardsetContentFromDB(103)).toBeNull();
     expect(yjs.flushIncrementalHistory).not.toHaveBeenCalled();
   });
 
@@ -176,6 +193,10 @@ describeMySql('Cardset snapshot persistence (MySQL)', () => {
       await admin.query('DROP TRIGGER reject_snapshot');
     }
     expect(await snapshots(104)).toEqual(before);
+    const legacy = await dataSource
+      .getRepository(CardsetContentOrmEntity)
+      .findOneByOrFail({ cardsetId: 104 });
+    expect(legacy.content).toBe(JSON.stringify({ cards: originalCards }));
     expect(await useCase.getCardsFromDB(104)).toEqual(originalCards);
     expect(yjs.flushIncrementalHistory).not.toHaveBeenCalled();
   });
@@ -225,6 +246,11 @@ describeMySql('Cardset snapshot persistence (MySQL)', () => {
       cardsetId: 107,
     });
     expect(await snapshots(107)).toHaveLength(1);
+    expect(await useCase.getCardsFromDB(107)).toEqual(originalCards);
+    const restored = await useCase.loadCardsetContentFromDB(107);
+    expect(restored?.getArray('cards').toJSON()).toEqual(originalCards);
+    restored?.destroy();
     // Full cardset deletion and legacy backfill remain task 4.
   });
+
 });

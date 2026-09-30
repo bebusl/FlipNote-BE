@@ -18,6 +18,8 @@ export class CollaborationUseCase {
     @InjectRepository(CardsetManagerOrmEntity)
     private readonly cardsetManagerRepository: Repository<CardsetManagerOrmEntity>,
     private readonly dataSource: DataSource,
+    @InjectRepository(CardsetSnapshotOrmEntity)
+    private readonly cardsetSnapshotRepository: Repository<CardsetSnapshotOrmEntity>,
   ) {}
 
   async isManager(cardSetId: number, userId: number): Promise<boolean> {
@@ -122,7 +124,7 @@ export class CollaborationUseCase {
     );
 
     await this.dataSource.transaction(async (manager) => {
-      // Keep current readers working until they are migrated to snapshots.
+      // Keep the legacy row as the save lock until task 4 revisits its lifecycle.
       // Upsert first: MySQL locks this unique cardset row until commit, so
       // concurrent saves insert snapshot IDs in the same order as latest content.
       await manager
@@ -153,14 +155,12 @@ export class CollaborationUseCase {
   async getCardsFromDB(
     cardSetId: number,
   ): Promise<{ id: string; question: string; answer: string }[]> {
-    const cardsetContent = await this.cardsetContentRepository.findOne({
+    const snapshot = await this.cardsetSnapshotRepository.findOne({
       where: { cardsetId: cardSetId },
+      order: { id: 'DESC' },
     });
-    if (!cardsetContent || !cardsetContent.content) return [];
-    const jsonContent = JSON.parse(cardsetContent.content) as Record<
-      string,
-      unknown
-    >;
+    if (!snapshot || !snapshot.content) return [];
+    const jsonContent = JSON.parse(snapshot.content) as Record<string, unknown>;
     const cards = jsonContent['cards'];
     if (!Array.isArray(cards)) return [];
     return cards as { id: string; question: string; answer: string }[];
@@ -168,13 +168,14 @@ export class CollaborationUseCase {
 
   async loadCardsetContentFromDB(cardSetId: number): Promise<Y.Doc | null> {
     try {
-      const cardsetContent = await this.cardsetContentRepository.findOne({
+      const snapshot = await this.cardsetSnapshotRepository.findOne({
         where: { cardsetId: cardSetId },
+        order: { id: 'DESC' },
       });
 
-      if (!cardsetContent || !cardsetContent.content) return null;
+      if (!snapshot || !snapshot.content) return null;
 
-      const jsonContent = JSON.parse(cardsetContent.content) as Record<
+      const jsonContent = JSON.parse(snapshot.content) as Record<
         string,
         unknown
       >;
