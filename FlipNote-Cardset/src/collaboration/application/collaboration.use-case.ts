@@ -1,9 +1,10 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import * as Y from 'yjs';
 import { YjsDocumentService } from '../infrastructure/redis/yjs-document.service';
 import { CardsetContentOrmEntity } from '../infrastructure/persistence/orm/cardset-content.orm-entity';
+import { CardsetSnapshotOrmEntity } from '../infrastructure/persistence/orm/cardset-snapshot.orm-entity';
 import { CardsetManagerOrmEntity } from '../../cardset/infrastructure/persistence/orm/cardset-manager.orm-entity';
 
 @Injectable()
@@ -16,6 +17,9 @@ export class CollaborationUseCase {
     private readonly cardsetContentRepository: Repository<CardsetContentOrmEntity>,
     @InjectRepository(CardsetManagerOrmEntity)
     private readonly cardsetManagerRepository: Repository<CardsetManagerOrmEntity>,
+    private readonly dataSource: DataSource,
+    @InjectRepository(CardsetSnapshotOrmEntity)
+    private readonly cardsetSnapshotRepository: Repository<CardsetSnapshotOrmEntity>,
   ) {}
 
   async isManager(cardSetId: number, userId: number): Promise<boolean> {
@@ -118,29 +122,26 @@ export class CollaborationUseCase {
     this.logger.log(
       `[saveCardsetContent] 카드 읽기 완료 - cardSetId=${cardSetId}, cardCount=${cardCount}, contentLength=${jsonContent.length}`,
     );
-    this.logger.log(
-      `[saveCardsetContent] 저장 내용 - ${JSON.stringify(cards)}`,
-    );
 
-    let content = await this.cardsetContentRepository.findOne({
-      where: { cardsetId: cardSetId },
-    });
-    const isNew = !content;
-    if (!content) {
-      content = this.cardsetContentRepository.create({
+    await this.dataSource.transaction(async (manager) => {
+      // Retain the legacy row as a shared lock for explicit saves and backfill.
+      // Upsert first: MySQL locks this unique cardset row until commit, so
+      // concurrent saves insert snapshot IDs in the same order as latest content.
+      await manager
+        .createQueryBuilder()
+        .insert()
+        .into(CardsetContentOrmEntity)
+        .values({ cardsetId: cardSetId, content: jsonContent })
+        .orUpdate(['content'], ['cardset_id'])
+        // A no-op MySQL upsert may return no ID. We don't need to reload it.
+        .updateEntity(false)
+        .execute();
+      // Always INSERT, even when the content is unchanged.
+      await manager.insert(CardsetSnapshotOrmEntity, {
         cardsetId: cardSetId,
-        content: '',
+        content: jsonContent,
       });
-    }
-    this.logger.log(
-      `[saveCardsetContent] DB 레코드 ${isNew ? '신규 생성' : '기존 업데이트'} - cardSetId=${cardSetId}`,
-    );
-
-    content.content = jsonContent;
-    this.logger.log(
-      `[saveCardsetContent] DB 저장 시작 - cardSetId=${cardSetId}, contentLength=${jsonContent.length}`,
-    );
-    await this.cardsetContentRepository.save(content);
+    });
     this.logger.log(
       `[saveCardsetContent] DB 저장 완료 - cardSetId=${cardSetId}`,
     );
@@ -154,14 +155,12 @@ export class CollaborationUseCase {
   async getCardsFromDB(
     cardSetId: number,
   ): Promise<{ id: string; question: string; answer: string }[]> {
-    const cardsetContent = await this.cardsetContentRepository.findOne({
+    const snapshot = await this.cardsetSnapshotRepository.findOne({
       where: { cardsetId: cardSetId },
+      order: { id: 'DESC' },
     });
-    if (!cardsetContent || !cardsetContent.content) return [];
-    const jsonContent = JSON.parse(cardsetContent.content) as Record<
-      string,
-      unknown
-    >;
+    if (!snapshot || !snapshot.content) return [];
+    const jsonContent = JSON.parse(snapshot.content) as Record<string, unknown>;
     const cards = jsonContent['cards'];
     if (!Array.isArray(cards)) return [];
     return cards as { id: string; question: string; answer: string }[];
@@ -169,13 +168,14 @@ export class CollaborationUseCase {
 
   async loadCardsetContentFromDB(cardSetId: number): Promise<Y.Doc | null> {
     try {
-      const cardsetContent = await this.cardsetContentRepository.findOne({
+      const snapshot = await this.cardsetSnapshotRepository.findOne({
         where: { cardsetId: cardSetId },
+        order: { id: 'DESC' },
       });
 
-      if (!cardsetContent || !cardsetContent.content) return null;
+      if (!snapshot || !snapshot.content) return null;
 
-      const jsonContent = JSON.parse(cardsetContent.content) as Record<
+      const jsonContent = JSON.parse(snapshot.content) as Record<
         string,
         unknown
       >;

@@ -11,6 +11,7 @@ import { CardOrmEntity } from './cardset/infrastructure/persistence/orm/card.orm
 import { CardsetManagerOrmEntity } from './cardset/infrastructure/persistence/orm/cardset-manager.orm-entity';
 import { CardSetMetadataOrmEntity } from './cardset/infrastructure/persistence/orm/cardset-metadata.orm-entity';
 import { CardsetContentOrmEntity } from './collaboration/infrastructure/persistence/orm/cardset-content.orm-entity';
+import { CardsetSnapshotOrmEntity } from './collaboration/infrastructure/persistence/orm/cardset-snapshot.orm-entity';
 import { CardsetIncrementalOrmEntity } from './collaboration/infrastructure/persistence/orm/cardset-incremental.orm-entity';
 
 @Module({
@@ -29,6 +30,7 @@ import { CardsetIncrementalOrmEntity } from './collaboration/infrastructure/pers
         CardsetManagerOrmEntity,
         CardSetMetadataOrmEntity,
         CardsetContentOrmEntity,
+        CardsetSnapshotOrmEntity,
         CardsetIncrementalOrmEntity,
       ],
       synchronize: process.env.DB_SYNCHRONIZE === 'true',
