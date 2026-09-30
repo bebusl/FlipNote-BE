@@ -41,6 +41,8 @@ async function bootstrap() {
     jsonDocumentUrl: 'card-sets/swagger-ui/api-json',
   });
 
+  // Complete snapshot backfill before exposing HTTP, WebSocket or gRPC reads.
+  await app.init();
   await app.startAllMicroservices();
   await app.listen(process.env.PORT ?? 8085);
 }

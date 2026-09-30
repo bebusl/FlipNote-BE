@@ -124,7 +124,7 @@ export class CollaborationUseCase {
     );
 
     await this.dataSource.transaction(async (manager) => {
-      // Keep the legacy row as the save lock until task 4 revisits its lifecycle.
+      // Retain the legacy row as a shared lock for explicit saves and backfill.
       // Upsert first: MySQL locks this unique cardset row until commit, so
       // concurrent saves insert snapshot IDs in the same order as latest content.
       await manager
